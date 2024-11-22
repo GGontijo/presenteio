@@ -1,3 +1,4 @@
+import { api } from "@/axiosConfig";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -16,10 +17,11 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { ShareModalButton } from "@/components/ShareModal"
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { ShareModalButton } from "@/components/ShareModal";
+import { Gift } from "@phosphor-icons/react";
 
 interface Item {
   id: number; // TODO: Obter id do retorno da API
@@ -51,23 +53,22 @@ export default function GiftRegistry() {
     payment_form: "",
     payment_info: "",
   });
-  
+
   const [title, setTitle] = useState(""); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
   const [message, setMessage] = useState(""); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddGiftModalOpen, setIsAddGiftModalOpen] = useState(false);
   const [selectedGift, setSelectedGift] = useState<Item | null>(null);
   const [paymentForm, setPaymentForm] = useState("");
-  
+
   const handlePaymentFormChange = (value) => {
     setPaymentForm(value);
     setNewGift({ ...newGift, payment_form: value });
-  }
-  const [stage, setStage] = useState('building');
-  const stages = ['building', 'preview'];
+  };
+  const [stage, setStage] = useState("building");
+  const stages = ["building", "preview"];
 
   const [userLogged, setuserLogged] = useState(false);
-  
 
   const addGift = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,7 +110,7 @@ export default function GiftRegistry() {
 
   return (
     <div className="w-screen h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8 ">
-      <nav className="fixed inset-x-0 top-0 z-50 bg-white shadow-sm dark:bg-gray-950/90">
+      <nav className="fixed inset-x-0 top-0 z-50 bg-white shadow-lg dark:bg-gray-950/90">
         <div className="w-full max-w-8xl mx-auto px-4">
           <div className="flex justify-between h-14">
             {userLogged == true ? (
@@ -123,8 +124,9 @@ export default function GiftRegistry() {
                 <Label htmlFor="airplane-mode">Ver como público</Label>
               </div>
             ) : (
-              <div className="flex items-center space-x-2 justify-start">
+              <div className="flex items-center text-transparent space-x-2 justify-start">
                 <Switch
+                  className="hidden"
                   onCheckedChange={() =>
                     setStage(stage === "building" ? "preview" : "building")
                   }
@@ -134,10 +136,15 @@ export default function GiftRegistry() {
                 <Label htmlFor="airplane-mode">Ver como público</Label>
               </div>
             )}
-            <nav className="hidden md:flex gap-4"></nav>
+            <nav className="flex items-center gap-2 text-xl font-mono text-gray-400 hover:text-black">
+              <Gift size={24} weight="thin" />
+              Presenteio
+            </nav>
             <div className="flex items-center gap-4">
               <ShareModalButton />
-              <Button size="lg" onClick={() => setuserLogged(!userLogged)}>Entrar</Button>
+              <Button size="lg" onClick={() => setuserLogged(!userLogged)}>
+                Entrar
+              </Button>
             </div>
           </div>
         </div>
@@ -233,8 +240,9 @@ export default function GiftRegistry() {
                 Escaneie o QR Code ou use o código Pix abaixo:
               </p>
               <div className="flex flex-col items-center gap-2">
-                <span className="text-lg font-semibold">{'pixCode'}</span> {/* TODO: Ajustar o valor do 'pixCode' */}
-                <Button onClick={() => copyToClipboard('pixCode')}>
+                <span className="text-lg font-semibold">{"pixCode"}</span>{" "}
+                {/* TODO: Ajustar o valor do 'pixCode' */}
+                <Button onClick={() => copyToClipboard("pixCode")}>
                   Copiar Código Pix
                 </Button>
               </div>
@@ -358,7 +366,7 @@ export default function GiftRegistry() {
               />
             </div>
             <Button type="submit" className="w-full">
-              Adicionar Presente
+              Adicionar Item na Página
             </Button>
           </form>
         </DialogContent>
