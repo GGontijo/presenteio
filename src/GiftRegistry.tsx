@@ -58,6 +58,12 @@ export default function GiftRegistry() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddGiftModalOpen, setIsAddGiftModalOpen] = useState(false);
   const [selectedGift, setSelectedGift] = useState<Item | null>(null);
+  const [paymentForm, setPaymentForm] = useState("");
+  
+  const handlePaymentFormChange = (value) => {
+    setPaymentForm(value);
+    setNewGift({ ...newGift, payment_form: value });
+  }
 
   const addGift = (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,9 +217,10 @@ export default function GiftRegistry() {
                   setNewGift({ ...newGift, name: e.target.value })
                 }
                 placeholder="Cafeteira Black Decker"
+                required
               />
             </div>
-            <div>
+            {/* <div>
               <Label className="text-black" htmlFor="giftImage">
                 Link da Imagem
               </Label>
@@ -224,13 +231,18 @@ export default function GiftRegistry() {
                   setNewGift({ ...newGift, image: e.target.value })
                 }
                 placeholder="https://exemplo.com/imagem.jpg"
+                required
               />
+            </div> */}
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+              <Label htmlFor="picture">Imagem do Item</Label>
+              <Input id="giftImage" type="file" />
             </div>
             <div>
               <Label className="text-black" htmlFor="giftDescription">
                 Descrição
               </Label>
-              <Textarea
+              <Textarea className="resize-none"
                 id="giftDescription"
                 value={newGift.desc}
                 onChange={(e) =>
@@ -256,6 +268,7 @@ export default function GiftRegistry() {
                   }
                   placeholder="0,00"
                   className="flex items-center pl-9"
+                  required
                 />
               </div>
             </div>
@@ -263,18 +276,35 @@ export default function GiftRegistry() {
               <Label className="text-black" htmlFor="itemPaymentForm">
                 Forma de Pagamento
               </Label>
-              <Select>
+              <Select onValueChange={handlePaymentFormChange} required>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Theme" />
+                  <SelectValue placeholder="Selecionar" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pix">pix</SelectItem>
-                  <SelectItem value="boleto">boleto</SelectItem>
-                  <SelectItem value="purchase_link">link de compra</SelectItem>
-                  <SelectItem value="external">externo</SelectItem>
-                  <SelectItem value="other">outro</SelectItem>
+                  <SelectItem value="pix">Pix</SelectItem>
+                  <SelectItem value="purchase_link">Link de Compra</SelectItem>
+                  <SelectItem value="other">Outro</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label className="text-black" htmlFor="itemName">
+                Informação de Pagamento
+              </Label>
+              <Input
+                id="itemPaymentInfo"
+                value={newGift.payment_info}
+                onChange={(e) =>
+                  setNewGift({ ...newGift, payment_info: e.target.value })
+                }
+                placeholder={
+                  paymentForm === "pix"
+                    ? "Código Pix"
+                    : paymentForm === "purchase_link"
+                    ? "Link de Compra do Produto"
+                    : "Insira Informação de Pagamento"
+                }
+              />
             </div>
             <Button type="submit" className="w-full">
               Adicionar Presente
