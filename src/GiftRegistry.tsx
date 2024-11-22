@@ -26,7 +26,7 @@ interface Item {
   name: string;
   desc: string;
   image: string;
-  value: number;
+  value: string;
   payment_form: string;
   payment_info: string;
 }
@@ -47,13 +47,13 @@ export default function GiftRegistry() {
     name: "",
     desc: "",
     image: "",
-    value: 0,
+    value: "",
     payment_form: "",
     payment_info: "",
   });
+  
   const [title, setTitle] = useState(""); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
   const [message, setMessage] = useState(""); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
-  const [pixCode, setPixCode] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddGiftModalOpen, setIsAddGiftModalOpen] = useState(false);
   const [selectedGift, setSelectedGift] = useState<Item | null>(null);
@@ -65,6 +65,9 @@ export default function GiftRegistry() {
   }
   const [stage, setStage] = useState('building');
   const stages = ['building', 'preview'];
+
+  const [userLogged, setuserLogged] = useState(false);
+  
 
   const addGift = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +84,7 @@ export default function GiftRegistry() {
         name: "",
         desc: "",
         image: "",
-        value: 0,
+        value: "",
         payment_form: "",
         payment_info: "",
       });
@@ -109,51 +112,77 @@ export default function GiftRegistry() {
       <nav className="fixed inset-x-0 top-0 z-50 bg-white shadow-sm dark:bg-gray-950/90">
         <div className="w-full max-w-8xl mx-auto px-4">
           <div className="flex justify-between h-14">
-            <div className="flex items-center space-x-2 justify-start">
-              <Switch id="preview" />
-              <Label htmlFor="airplane-mode">Preview</Label>
-            </div>
-            <nav className="hidden md:flex gap-4">
-            </nav>
+            {userLogged == true ? (
+              <div className="flex items-center space-x-2 justify-start">
+                <Switch
+                  onCheckedChange={() =>
+                    setStage(stage === "building" ? "preview" : "building")
+                  }
+                  id="preview"
+                />
+                <Label htmlFor="airplane-mode">Ver como público</Label>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 justify-start">
+                <Switch
+                  onCheckedChange={() =>
+                    setStage(stage === "building" ? "preview" : "building")
+                  }
+                  disabled
+                  id="preview"
+                />
+                <Label htmlFor="airplane-mode">Ver como público</Label>
+              </div>
+            )}
+            <nav className="hidden md:flex gap-4"></nav>
             <div className="flex items-center gap-4">
               <ShareModalButton />
-              <Button size="lg">Entrar</Button>
+              <Button size="lg" onClick={() => setuserLogged(!userLogged)}>Entrar</Button>
             </div>
           </div>
         </div>
       </nav>
       <div className="my-2 h-6"></div>
       <header className="text-center mb-12 space-y-4 ">
-        <input
-          type="text"
-          value={title}
-          placeholder="Clique para adicionar um nome"
-          onChange={(e) => setTitle(e.target.value)}
-          className="text-4xl font-bold text-pink-700 mb-4 bg-transparent border-black border text-center w-full"
-        />
-        <textarea
-          value={message}
-          placeholder="Clique para adicionar uma descrição"
-          onChange={(e) => setMessage(e.target.value)}
-          className="text-gray-600 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none"
-          rows={3}
-        />
+        {stage === "building" ? (
+          <input
+            type="text"
+            value={title}
+            maxLength={50}
+            placeholder="Clique para adicionar um nome"
+            onChange={(e) => setTitle(e.target.value)}
+            className="text-4xl font-bold text-pink-700 mb-4 bg-transparent border-black border text-center w-full"
+          />
+        ) : (
+          <input
+            type="text"
+            disabled
+            value={title}
+            maxLength={50}
+            onChange={(e) => setTitle(e.target.value)}
+            className="text-4xl font-bold text-pink-700 mb-4 bg-transparent text-center w-full"
+          />
+        )}
+        {stage === "building" ? (
+          <textarea
+            value={message}
+            placeholder="Clique para adicionar uma descrição"
+            onChange={(e) => setMessage(e.target.value)}
+            maxLength={250}
+            className="text-gray-600 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none"
+            rows={3}
+          />
+        ) : (
+          <textarea
+            value={message}
+            disabled
+            onChange={(e) => setMessage(e.target.value)}
+            maxLength={250}
+            className="text-gray-600 max-w-2xl mx-auto bg-transparent text-center w-full resize-none"
+            rows={3}
+          />
+        )}
       </header>
-
-      <div className="mb-8">
-        <h3 className="text-xl font-semibold mb-4">Configurações</h3>
-        <div className="flex flex-wrap gap-4">
-          <div>
-            <Label htmlFor="pixCode">Código Pix</Label>
-            <Input
-              id="pixCode"
-              value={pixCode}
-              onChange={(e) => setPixCode(e.target.value)}
-              placeholder="Ex: 123.456.789-00"
-            />
-          </div>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {gifts.map((gift) => (
@@ -174,15 +203,17 @@ export default function GiftRegistry() {
             </CardContent>
           </Card>
         ))}
-        <Card
-          className="flex py-4 items-center justify-center cursor-pointer"
-          onClick={() => setIsAddGiftModalOpen(true)}
-        >
-          <CardContent className="text-center">
-            <PlusCircle className="mx-auto mb-2 h-14 w-12 text-gray-400" />
-            <p className="text-gray-600">Adicionar Novo Item</p>
-          </CardContent>
-        </Card>
+        {stage === "building" && (
+          <Card
+            className="flex py-4 items-center justify-center cursor-pointer"
+            onClick={() => setIsAddGiftModalOpen(true)}
+          >
+            <CardContent className="text-center">
+              <PlusCircle className="mx-auto mb-2 h-14 w-12 text-gray-400" />
+              <p className="text-gray-600">Adicionar Novo Item</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -202,8 +233,8 @@ export default function GiftRegistry() {
                 Escaneie o QR Code ou use o código Pix abaixo:
               </p>
               <div className="flex flex-col items-center gap-2">
-                <span className="text-lg font-semibold">{pixCode}</span>
-                <Button onClick={() => copyToClipboard(pixCode)}>
+                <span className="text-lg font-semibold">{'pixCode'}</span> {/* TODO: Ajustar o valor do 'pixCode' */}
+                <Button onClick={() => copyToClipboard('pixCode')}>
                   Copiar Código Pix
                 </Button>
               </div>
@@ -254,9 +285,10 @@ export default function GiftRegistry() {
             </div>
             <div>
               <Label className="text-black" htmlFor="giftDescription">
-                Descrição
+                Descrição do Item
               </Label>
-              <Textarea className="resize-none"
+              <Textarea
+                className="resize-none"
                 id="giftDescription"
                 value={newGift.desc}
                 onChange={(e) =>
@@ -275,13 +307,18 @@ export default function GiftRegistry() {
                 </div>
                 <Input
                   id="giftValue"
-                  type="number"
+                  type="string"
                   value={newGift.value}
-                  onChange={(e) =>
-                    setNewGift({ ...newGift, value: e.target.valueAsNumber })
-                  }
+                  defaultValue={newGift.value}
+                  onChange={(e) => {
+                    let value = e.target.value.replace(/\D/g, "");
+                    value = (Number(value) / 100).toFixed(2).replace(".", ",");
+                    setNewGift({ ...newGift, value });
+                  }}
                   placeholder="0,00"
-                  className="flex items-center pl-9"
+                  pattern="^[0-9]*[.,]?[0-9]*$"
+                  inputMode="decimal"
+                  className="flex items-center pl-9 text-xl"
                   required
                 />
               </div>
