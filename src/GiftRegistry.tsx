@@ -16,8 +16,9 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
 interface Item {
   id: number; // TODO: Obter id do retorno da API
@@ -49,11 +50,10 @@ export default function GiftRegistry() {
     payment_form: "",
     payment_info: "",
   });
-  const [title, setTitle] = useState("Nome do Casal");
-  const [subtitle, setSubtitle] = useState("Lista de Presentes de Casamento");
+  const [title, setTitle] = useState("Clique para adicionar um nome"); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
   const [message, setMessage] = useState(
-    "Sua presença é o maior presente, mas se desejar nos presentear, ficaremos honrados com sua contribuição para o início de nossa vida a dois."
-  );
+    "Clique para adicionar uma descrição"
+  ); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
   const [pixCode, setPixCode] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddGiftModalOpen, setIsAddGiftModalOpen] = useState(false);
@@ -64,6 +64,8 @@ export default function GiftRegistry() {
     setPaymentForm(value);
     setNewGift({ ...newGift, payment_form: value });
   }
+  const [stage, setStage] = useState('building');
+  const stages = ['building', 'preview'];
 
   const addGift = (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,23 +107,21 @@ export default function GiftRegistry() {
 
   return (
     <div className="w-screen h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8">
-      <header className="text-center mb-12">
+      <header className="text-center mb-12 space-y-4">
+        <div className="flex items-center space-x-2 justify-end">
+          <Switch id="preview" />
+          <Label htmlFor="airplane-mode">Preview</Label>
+        </div>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="text-4xl font-bold text-pink-700 mb-4 bg-transparent border-none text-center w-full"
-        />
-        <input
-          type="text"
-          value={subtitle}
-          onChange={(e) => setSubtitle(e.target.value)}
-          className="text-2xl font-bold mb-4 bg-transparent border-none text-center w-full"
+          className="text-4xl font-bold text-pink-700 mb-4 bg-transparent border-black border text-center w-full"
         />
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className="text-gray-600 max-w-2xl mx-auto bg-transparent border-none text-center w-full resize-none"
+          className="text-gray-600 max-w-2xl mx-auto bg-transparent  border-black border text-center w-full resize-none"
           rows={3}
         />
       </header>
