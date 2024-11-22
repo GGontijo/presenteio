@@ -19,6 +19,7 @@ import {
   SelectValue
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { ShareModalButton } from "@/components/ShareModal"
 
 interface Item {
   id: number; // TODO: Obter id do retorno da API
@@ -50,10 +51,8 @@ export default function GiftRegistry() {
     payment_form: "",
     payment_info: "",
   });
-  const [title, setTitle] = useState("Clique para adicionar um nome"); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
-  const [message, setMessage] = useState(
-    "Clique para adicionar uma descrição"
-  ); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
+  const [title, setTitle] = useState(""); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
+  const [message, setMessage] = useState(""); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
   const [pixCode, setPixCode] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddGiftModalOpen, setIsAddGiftModalOpen] = useState(false);
@@ -106,22 +105,37 @@ export default function GiftRegistry() {
   };
 
   return (
-    <div className="w-screen h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8">
-      <header className="text-center mb-12 space-y-4">
-        <div className="flex items-center space-x-2 justify-end">
-          <Switch id="preview" />
-          <Label htmlFor="airplane-mode">Preview</Label>
+    <div className="w-screen h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8 ">
+      <nav className="fixed inset-x-0 top-0 z-50 bg-white shadow-sm dark:bg-gray-950/90">
+        <div className="w-full max-w-8xl mx-auto px-4">
+          <div className="flex justify-between h-14">
+            <div className="flex items-center space-x-2 justify-start">
+              <Switch id="preview" />
+              <Label htmlFor="airplane-mode">Preview</Label>
+            </div>
+            <nav className="hidden md:flex gap-4">
+            </nav>
+            <div className="flex items-center gap-4">
+              <ShareModalButton />
+              <Button size="lg">Entrar</Button>
+            </div>
+          </div>
         </div>
+      </nav>
+      <div className="my-2 h-6"></div>
+      <header className="text-center mb-12 space-y-4 ">
         <input
           type="text"
           value={title}
+          placeholder="Clique para adicionar um nome"
           onChange={(e) => setTitle(e.target.value)}
           className="text-4xl font-bold text-pink-700 mb-4 bg-transparent border-black border text-center w-full"
         />
         <textarea
           value={message}
+          placeholder="Clique para adicionar uma descrição"
           onChange={(e) => setMessage(e.target.value)}
-          className="text-gray-600 max-w-2xl mx-auto bg-transparent  border-black border text-center w-full resize-none"
+          className="text-gray-600 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none"
           rows={3}
         />
       </header>
