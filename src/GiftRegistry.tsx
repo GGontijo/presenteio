@@ -51,7 +51,8 @@ interface UserObject {
   name: string;
   email: string;
   picture_url: string;
-  auth_provider_id?: string;
+  auth_provider: string;
+  external_provider_id?: string;
   password?: string;
 }
 
@@ -156,13 +157,16 @@ export default function GiftRegistry() {
           name: tokenDecoded.name,
           email: tokenDecoded.email,
           picture_url: tokenDecoded.picture,
-          auth_provider_id: tokenDecoded.sub,
+          auth_provider: "google",
+          external_provider_id: tokenDecoded.sub,
         };
+
+        console.log(tokenDecoded);
 
         setCurrentUser(user);
 
         try {
-          const response = api.post("/users", CurrentUser, {
+          const response = api.post("/users", user, {
             headers: {
               Authorization: `Bearer ${loginResponse.credential}`,
             },
