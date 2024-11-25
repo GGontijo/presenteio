@@ -1,6 +1,6 @@
-import { Copy } from "lucide-react"
+import { Copy } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -10,15 +10,23 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-export function ShareModalButton() {
+export function ShareModalButton({ enabled }: { enabled: boolean }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="lg" variant="outline">Publicar</Button>
+        {enabled == true ? (
+          <Button size="lg" variant="outline">
+            Publicar
+          </Button>
+        ) : (
+          <Button size="lg" variant="outline" disabled>
+            Publicar
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -28,17 +36,15 @@ export function ShareModalButton() {
           </DialogDescription>
         </DialogHeader>
         <div className="flex items-center space-x-2">
-          <div className="grid flex-1 gap-2">
-            <Label htmlFor="link" className="sr-only">
-              Link
-            </Label>
-            <Input
-              id="link"
-              defaultValue="https://ui.shadcn.com/docs/installation"
-              readOnly
-            />
-          </div>
-          <Button type="submit" size="sm" className="px-3">
+          <Input id="link" value={import.meta.env.VITE_BASE_URL} readOnly />
+          <Button
+            type="submit"
+            size="sm"
+            className="px-3"
+            onClick={() =>
+              navigator.clipboard.writeText(import.meta.env.VITE_BASE_URL)
+            }
+          >
             <span className="sr-only">Copiar</span>
             <Copy />
           </Button>
@@ -52,5 +58,5 @@ export function ShareModalButton() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

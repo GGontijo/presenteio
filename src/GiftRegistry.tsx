@@ -1,6 +1,6 @@
-import { api } from "@/axiosConfig";
+import api from "@/axiosConfig";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -20,20 +20,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ShareModalButton } from "@/components/ShareModal";
-import { Gift } from "@phosphor-icons/react";
+import { ShareModalButton } from "@/components/shareModal";
+import { Gift as GiftObject } from "@phosphor-icons/react";
+import { useEffect } from "react";
+import { LoginModalButton } from "./components/loginModal";
+import { jwtDecode } from "jwt-decode";
+import { CredentialResponse } from "@react-oauth/google";
 
-interface Item {
+interface ItemObject {
   id: number; // TODO: Obter id do retorno da API
   name: string;
   desc: string;
-  image: string;
-  value: string;
+  image_url: string;
+  value: number;
   payment_form: string;
   payment_info: string;
 }
 
-interface Gift {
+interface GiftObject {
   id: number; // TODO: Obter id do retorno da API
   sender_name: string;
   sender_phone: string;
@@ -42,75 +46,158 @@ interface Gift {
   total: number;
 }
 
+interface UserObject {
+  id?: number; // TODO: Obter id do retorno da API
+  name: string;
+  email: string;
+  picture_url: string;
+  auth_provider_id?: string;
+  password?: string;
+}
+
+interface JwtObject {
+  exp: number;
+  sub: string;
+  name: string;
+  email: string;
+  picture: string;
+}
+
 export default function GiftRegistry() {
-  const [gifts, setGifts] = useState<Item[]>([]);
+  const [gifts, setGifts] = useState<ItemObject[]>([]);
   const [newGift, setNewGift] = useState({
     id: 0,
     name: "",
     desc: "",
-    image: "",
-    value: "",
+    image_url: "",
+    value: 0,
     payment_form: "",
     payment_info: "",
   });
 
-  const [title, setTitle] = useState(""); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
-  const [message, setMessage] = useState(""); // TODO: Exibir a mensagem de acordo com o preset (casamento, aniversário, etc)
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAddGiftModalOpen, setIsAddGiftModalOpen] = useState(false);
-  const [selectedGift, setSelectedGift] = useState<Item | null>(null);
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
+  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [selectedGift, setSelectedGift] = useState<ItemObject | null>(null);
+  const [CurrentUser, setCurrentUser] = useState<UserObject | null>(null);
   const [paymentForm, setPaymentForm] = useState("");
 
-  const handlePaymentFormChange = (value) => {
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const response = await api.get("/items");
+        setGifts(response.data);
+        console.log(response.data);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    fetchItems();
+  }, []); // O array vazio garante que o efeito seja executado apenas uma vez, ao montar o componente
+
+  const handlePaymentFormChange = (value: string) => {
     setPaymentForm(value);
     setNewGift({ ...newGift, payment_form: value });
   };
   const [stage, setStage] = useState("building");
   const stages = ["building", "preview"];
 
-  const [userLogged, setuserLogged] = useState(false);
+  const [sendMessage, setSendMessage] = useState(false);
 
-  const addGift = (e: React.FormEvent) => {
+  const [userLogged, setUserLogged] = useState(false);
+
+  const addItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (
       newGift.name &&
-      newGift.image &&
+      newGift.image_url &&
       newGift.value &&
       newGift.payment_form
     ) {
-      newGift.id = 1; // TODO: Obter id do retorno da API
+      const response = api.post("/items", newGift);
+      console.log(response);
+
       setGifts([...gifts, { ...newGift }]);
       setNewGift({
         id: 0,
         name: "",
         desc: "",
-        image: "",
-        value: "",
+        image_url: "",
+        value: 0,
         payment_form: "",
         payment_info: "",
       });
-      setIsAddGiftModalOpen(false);
+      setIsAddItemModalOpen(false);
     }
   };
 
-  const openModal = (gift: Item) => {
+  const openModal = (gift: ItemObject) => {
+    setSendMessage(false);
     setSelectedGift(gift);
-    setIsModalOpen(true);
+    setIsGiftModalOpen(true);
   };
 
   const closeModal = () => {
-    setIsModalOpen(false);
+    setIsGiftModalOpen(false);
     setSelectedGift(null);
+  };
+
+  const handleLoginResponse = (loginResponse?: CredentialResponse) => {
+    console.log(loginResponse);
+    if (loginResponse) {
+      if (!userLogged) {
+        const tokenDecoded = jwtDecode<JwtObject>(
+          loginResponse.credential as string
+        );
+
+        const user: UserObject = {
+          name: tokenDecoded.name,
+          email: tokenDecoded.email,
+          picture_url: tokenDecoded.picture,
+          auth_provider_id: tokenDecoded.sub,
+        };
+
+        setCurrentUser(user);
+
+        try {
+          const response = api.post("/users", CurrentUser, {
+            headers: {
+              Authorization: `Bearer ${loginResponse.credential}`,
+            },
+          });
+          console.log(response);
+        } catch (err) {
+          console.log(err);
+        }
+        setUserLogged(true);
+      }
+    } else {
+      setUserLogged(false);
+    }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert("Código Pix copiado!");
+    alert(`"Valor copiado: ${text}!"`);
   };
+
+  function removeItem(id: number): void {
+    const response = api.delete("/items/" + id);
+    console.log(response);
+    setGifts(gifts.filter((gift) => gift.id !== id));
+  }
 
   return (
     <div className="w-screen h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8 ">
-      <nav className="fixed inset-x-0 top-0 z-50 bg-white shadow-lg dark:bg-gray-950/90">
+      <nav
+        className={
+          stage === "building"
+            ? "fixed inset-x-0 top-0 z-50 bg-white shadow-lg dark:bg-gray-950/90"
+            : "fixed inset-x-0 top-0 z-50 bg-transparent"
+        }
+      >
         <div className="w-full max-w-8xl mx-auto px-4">
           <div className="flex justify-between h-14">
             {userLogged == true ? (
@@ -121,7 +208,7 @@ export default function GiftRegistry() {
                   }
                   id="preview"
                 />
-                <Label htmlFor="airplane-mode">Ver como público</Label>
+                <Label htmlFor="previewMode">Ver como público</Label>
               </div>
             ) : (
               <div className="flex items-center text-transparent space-x-2 justify-start">
@@ -133,19 +220,28 @@ export default function GiftRegistry() {
                   disabled
                   id="preview"
                 />
-                <Label htmlFor="airplane-mode">Ver como público</Label>
+                <Label htmlFor="previewMode">Ver como público</Label>
               </div>
             )}
-            <nav className="flex items-center gap-2 text-xl font-mono text-gray-400 hover:text-black">
-              <Gift size={24} weight="thin" />
-              Presenteio
-            </nav>
-            <div className="flex items-center gap-4">
-              <ShareModalButton />
-              <Button size="lg" onClick={() => setuserLogged(!userLogged)}>
-                Entrar
-              </Button>
-            </div>
+            {stage === "building" ? (
+              <nav className="flex items-center gap-2 text-xl font-mono text-gray-400 hover:text-black">
+                <GiftObject size={24} weight="thin" />
+                Presenteio
+              </nav>
+            ) : null}
+            {stage === "building" ? (
+              <div className="flex items-center gap-4">
+                {userLogged == true && <ShareModalButton enabled={true} />}
+                {userLogged == false && (
+                  <LoginModalButton
+                    onLoginSuccess={(loginResponse: CredentialResponse) =>
+                      handleLoginResponse(loginResponse)
+                    }
+                    onLoginFailure={() => handleLoginResponse()}
+                  />
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
       </nav>
@@ -156,9 +252,9 @@ export default function GiftRegistry() {
             type="text"
             value={title}
             maxLength={50}
-            placeholder="Clique para adicionar um nome"
+            placeholder="Clique para adicionar um título"
             onChange={(e) => setTitle(e.target.value)}
-            className="text-4xl font-bold text-pink-700 mb-4 bg-transparent border-black border text-center w-full"
+            className="text-4xl font-bold text-slate-800 mb-4 bg-transparent border-black border text-center w-full"
           />
         ) : (
           <input
@@ -167,7 +263,7 @@ export default function GiftRegistry() {
             value={title}
             maxLength={50}
             onChange={(e) => setTitle(e.target.value)}
-            className="text-4xl font-bold text-pink-700 mb-4 bg-transparent text-center w-full"
+            className="text-4xl font-bold text-slate-800 mb-4 bg-transparent text-center w-full"
           />
         )}
         {stage === "building" ? (
@@ -176,7 +272,7 @@ export default function GiftRegistry() {
             placeholder="Clique para adicionar uma descrição"
             onChange={(e) => setMessage(e.target.value)}
             maxLength={250}
-            className="text-gray-600 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none"
+            className="text-gray-800 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none"
             rows={3}
           />
         ) : (
@@ -192,19 +288,40 @@ export default function GiftRegistry() {
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {gifts.map((gift) => (
+        {gifts.map((item) => (
           <Card
-            key={gift.id}
+            key={item.id}
             className="overflow-hidden transition-shadow hover:shadow-lg"
           >
+            {stage === "building" && (
+              <div className="flex">
+                <Button className="w-full bg-blue-400 h-8 hover:bg-blue-500">
+                  Editar Item
+                </Button>
+                <Button
+                  className="bg-gray-500 h-8 hover:bg-red-500"
+                  onClick={() => removeItem(item.id)}
+                >
+                  Remover
+                </Button>
+              </div>
+            )}
             <img
-              src={gift.image}
-              alt={gift.image}
-              className="w-full h-48 object-cover"
+              src={item.image_url}
+              alt={item.image_url}
+              className="w-full h-60 object-cover"
             />
             <CardContent className="p-4">
-              <p className="text-sm mb-2">{gift.name}</p>
-              <Button onClick={() => openModal(gift)} className="w-full">
+              <div className="flex justify-between">
+                <p className="text-xl mb-2 text-center font-serif">
+                  {item.name}
+                </p>
+                <p className="mb-2 text-xl font-mono text-center text-gray-700">
+                  R$ {item.value}
+                </p>
+              </div>
+              <p className="text-sm mb-2 text-center">{item.desc}</p>
+              <Button onClick={() => openModal(item)} className="w-full">
                 Presentear
               </Button>
             </CardContent>
@@ -213,7 +330,7 @@ export default function GiftRegistry() {
         {stage === "building" && (
           <Card
             className="flex py-4 items-center justify-center cursor-pointer"
-            onClick={() => setIsAddGiftModalOpen(true)}
+            onClick={() => setIsAddItemModalOpen(true)}
           >
             <CardContent className="text-center">
               <PlusCircle className="mx-auto mb-2 h-14 w-12 text-gray-400" />
@@ -223,42 +340,120 @@ export default function GiftRegistry() {
         )}
       </div>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isGiftModalOpen} onOpenChange={setIsGiftModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Contribuir com o Presente</DialogTitle>
+            <DialogTitle className="text-center">
+              {selectedGift?.name}
+            </DialogTitle>
           </DialogHeader>
           {selectedGift && (
             <div className="text-center">
               <img
-                src={selectedGift.image}
-                alt={selectedGift.desc}
-                className="w-full max-w-xs mx-auto mb-4 rounded-lg"
+                src={selectedGift.image_url}
+                alt={selectedGift.image_url}
+                className="w-full mb-5 rounded-lg shadow-2xl"
               />
               <p className="mb-4">{selectedGift.desc}</p>
-              <p className="mb-2">
-                Escaneie o QR Code ou use o código Pix abaixo:
+              <p className="mb-2 text-3xl font-mono font-bold">
+                {"R$" + selectedGift.value.toFixed(2)}
               </p>
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-lg font-semibold">{"pixCode"}</span>{" "}
-                {/* TODO: Ajustar o valor do 'pixCode' */}
-                <Button onClick={() => copyToClipboard("pixCode")}>
-                  Copiar Código Pix
-                </Button>
+              <div className="space-y-5">
+                <p className="text-gray-800">
+                  Forma de Pagamento: {selectedGift.payment_form}
+                </p>
+                <div className="justify-center flex gap-2">
+                  <input
+                    className="text-md font-semibold text-gray-700 border-black border px-4"
+                    id="payment_info"
+                    value={selectedGift.payment_info}
+                    readOnly
+                    autoFocus={true}
+                  />
+                  <Button
+                    className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
+                    onClick={() => copyToClipboard(selectedGift?.payment_info)}
+                  >
+                    Copiar
+                  </Button>
+                </div>
+                <div className="flex gap-2 justify-center">
+                  <Switch
+                    onCheckedChange={() =>
+                      setSendMessage(sendMessage === false ? true : false)
+                    }
+                    checked={sendMessage}
+                    id="sendMessage"
+                  />
+                  <p className="text-gray-800">Desejo enviar uma mensagem</p>
+                </div>
+                {sendMessage && (
+                  <div className="justify-center gap-4 flex flex-col">
+                    <div className="flex gap-4 w-full">
+                      <div className="flex-1 flex flex-col">
+                        <Label
+                          className="text-black mb-1 text-lg"
+                          htmlFor="sender_name"
+                        >
+                          Nome
+                        </Label>
+                        <Input
+                          className="text-black"
+                          id="sender_name"
+                          placeholder="João da Silva"
+                        />
+                      </div>
+                      <div className="flex-1 flex flex-col">
+                        <Label
+                          className="text-black mb-1 text-lg"
+                          htmlFor="sender_phone"
+                        >
+                          Telefone
+                        </Label>
+                        <Input
+                          className="text-black"
+                          id="sender_phone"
+                          placeholder="(99) 9999-9999"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col">
+                      <Label
+                        className="text-black mb-1 text-lg"
+                        htmlFor="sender_phone"
+                      >
+                        Sua Mensagem
+                      </Label>
+                      <Textarea
+                        className="text-black resize-none"
+                        id="message"
+                        placeholder="Escreva sua mensagem..."
+                        rows={3}
+                        maxLength={250}
+                      />
+                    </div>
+                    <Button
+                      className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white ml-4"
+                      onClick={() => setIsGiftModalOpen(false)}
+                    >
+                      Enviar Mensagem
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isAddGiftModalOpen} onOpenChange={setIsAddGiftModalOpen}>
+      <Dialog open={isAddItemModalOpen} onOpenChange={setIsAddItemModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-black">
               Adicionar Novo Item
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={addGift} className="space-y-4">
+          <form onSubmit={addItem} className="space-y-4">
             <div>
               <Label className="text-black" htmlFor="itemName">
                 Nome do Item
@@ -273,21 +468,21 @@ export default function GiftRegistry() {
                 required
               />
             </div>
-            {/* <div>
+            <div>
               <Label className="text-black" htmlFor="giftImage">
                 Link da Imagem
               </Label>
               <Input
                 id="giftImage"
-                value={newGift.image}
+                value={newGift.image_url}
                 onChange={(e) =>
-                  setNewGift({ ...newGift, image: e.target.value })
+                  setNewGift({ ...newGift, image_url: e.target.value })
                 }
                 placeholder="https://exemplo.com/imagem.jpg"
                 required
               />
-            </div> */}
-            <div className="grid w-full max-w-sm items-center gap-1.5">
+            </div>
+            {/* <div className="grid w-full max-w-sm items-center gap-1.5">
               <Label htmlFor="picture">Imagem do Item</Label>
               <Input id="giftImage" type="file" />
             </div>
@@ -304,7 +499,7 @@ export default function GiftRegistry() {
                 }
                 placeholder="Descrição do item"
               />
-            </div>
+            </div> */}
             <div>
               <Label className="text-black" htmlFor="giftValue">
                 Valor do Item
@@ -315,16 +510,28 @@ export default function GiftRegistry() {
                 </div>
                 <Input
                   id="giftValue"
-                  type="string"
-                  value={newGift.value}
-                  defaultValue={newGift.value}
+                  type="text"
+                  value={
+                    newGift.value
+                      ? new Intl.NumberFormat("pt-BR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }).format(newGift.value)
+                      : ""
+                  }
                   onChange={(e) => {
-                    let value = e.target.value.replace(/\D/g, "");
-                    value = (Number(value) / 100).toFixed(2).replace(".", ",");
-                    setNewGift({ ...newGift, value });
+                    let value = e.target.value;
+
+                    // Remove caracteres não numéricos, mantendo a vírgula
+                    value = value.replace(/\D/g, "");
+
+                    // Divide por 100 para obter o valor correto
+                    const floatValue = Number(value) / 100;
+
+                    // Atualiza o estado com o valor numérico
+                    setNewGift({ ...newGift, value: floatValue });
                   }}
                   placeholder="0,00"
-                  pattern="^[0-9]*[.,]?[0-9]*$"
                   inputMode="decimal"
                   className="flex items-center pl-9 text-xl"
                   required
@@ -365,7 +572,7 @@ export default function GiftRegistry() {
                 }
               />
             </div>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" onSubmit={addItem}>
               Adicionar Item na Página
             </Button>
           </form>

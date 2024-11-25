@@ -8,6 +8,7 @@ const api = axios.create({
   timeout: 10000, // Tempo máximo de espera em ms
   headers: {
     'Content-Type': 'application/json',
+    'user-id': 1,
     // Outros cabeçalhos personalizados, se necessário
   },
 });
