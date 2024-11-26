@@ -1,6 +1,8 @@
 import api from "@/axiosConfig";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Cookies from "js-cookie";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle } from "lucide-react";
+import { Cookie, PlusCircle } from "lucide-react";
 import React, { useState } from "react";
 import {
   Select,
@@ -26,6 +28,13 @@ import { useEffect } from "react";
 import { LoginModalButton } from "./components/loginModal";
 import { jwtDecode } from "jwt-decode";
 import { CredentialResponse } from "@react-oauth/google";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./components/ui/dropdown-menu";
 
 interface ItemObject {
   id: number; // TODO: Obter id do retorno da API
@@ -51,8 +60,6 @@ interface UserObject {
   name: string;
   email: string;
   picture_url: string;
-  auth_provider: string;
-  external_provider_id?: string;
   password?: string;
 }
 
@@ -75,6 +82,37 @@ export default function GiftRegistry() {
     payment_form: "",
     payment_info: "",
   });
+
+  const [sessionToken, setSessionToken] = useState("");
+  const [userId, setUserId] = useState("");
+
+  const userLogout = () => {
+    setUserLogged(false);
+    setSessionToken("");
+    setUserId("");
+    Cookies.remove("sessionToken");
+    Cookies.remove("userId");
+  };
+
+  useEffect(() => {
+    if (sessionToken) {
+      Cookies.set("sessionToken", sessionToken, {
+        expires: 1,
+        path: "/",
+        secure: true,
+      });
+    }
+  }, [sessionToken]);
+
+  useEffect(() => {
+    if (userId) {
+      Cookies.set("userId", userId, {
+        expires: 1,
+        path: "/",
+        secure: false,
+      });
+    }
+  }, [userId]);
 
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -102,6 +140,21 @@ export default function GiftRegistry() {
     setPaymentForm(value);
     setNewGift({ ...newGift, payment_form: value });
   };
+
+  const getInitials = (fullName: string | undefined) => {
+    if (!fullName) return "NA";
+
+    const nameParts = fullName.trim().split(" ");
+    if (nameParts.length === 1) {
+      return nameParts[0].charAt(0).toUpperCase();
+    }
+
+    const firstInitial = nameParts[0].charAt(0);
+    const lastInitial = nameParts[nameParts.length - 1].charAt(0);
+
+    return (firstInitial + lastInitial).toUpperCase();
+  };
+
   const [stage, setStage] = useState("building");
   const stages = ["building", "preview"];
 
@@ -145,7 +198,7 @@ export default function GiftRegistry() {
     setSelectedGift(null);
   };
 
-  const handleLoginResponse = (loginResponse?: CredentialResponse) => {
+  const handleLoginResponse = async (loginResponse?: CredentialResponse) => {
     console.log(loginResponse);
     if (loginResponse) {
       if (!userLogged) {
@@ -153,32 +206,27 @@ export default function GiftRegistry() {
           loginResponse.credential as string
         );
 
-        const user: UserObject = {
-          name: tokenDecoded.name,
-          email: tokenDecoded.email,
-          picture_url: tokenDecoded.picture,
-          auth_provider: "google",
-          external_provider_id: tokenDecoded.sub,
-        };
-
         console.log(tokenDecoded);
 
-        setCurrentUser(user);
-
         try {
-          const response = api.post("/users", user, {
-            headers: {
-              Authorization: `Bearer ${loginResponse.credential}`,
-            },
+          const response = await api.post("/users", {
+            name: tokenDecoded.name,
+            email: tokenDecoded.email,
+            bearer_token: loginResponse.credential,
+            auth_provider: "google",
           });
-          console.log(response);
+          console.log(response.data);
+          setSessionToken(loginResponse.credential as string);
+          setUserId(response.data.id);
+          setCurrentUser(response.data);
+          setUserLogged(true);
         } catch (err) {
           console.log(err);
         }
-        setUserLogged(true);
       }
     } else {
       setUserLogged(false);
+      userLogout();
     }
   };
 
@@ -204,48 +252,61 @@ export default function GiftRegistry() {
       >
         <div className="w-full max-w-8xl mx-auto px-4">
           <div className="flex justify-between h-14">
-            {userLogged == true ? (
-              <div className="flex items-center space-x-2 justify-start">
+            {
+              <div
+                className={`flex items-center space-x-2 justify-start ${
+                  !userLogged ? "text-transparent" : ""
+                }`}
+              >
                 <Switch
+                  className={!userLogged ? "hidden" : ""}
                   onCheckedChange={() =>
                     setStage(stage === "building" ? "preview" : "building")
                   }
+                  disabled={!userLogged}
                   id="preview"
                 />
                 <Label htmlFor="previewMode">Ver como público</Label>
               </div>
-            ) : (
-              <div className="flex items-center text-transparent space-x-2 justify-start">
-                <Switch
-                  className="hidden"
-                  onCheckedChange={() =>
-                    setStage(stage === "building" ? "preview" : "building")
-                  }
-                  disabled
-                  id="preview"
-                />
-                <Label htmlFor="previewMode">Ver como público</Label>
-              </div>
-            )}
+            }
             {stage === "building" ? (
               <nav className="flex items-center gap-2 text-xl font-mono text-gray-400 hover:text-black">
                 <GiftObject size={24} weight="thin" />
                 Presenteio
               </nav>
             ) : null}
-            {stage === "building" ? (
-              <div className="flex items-center gap-4">
-                {userLogged == true && <ShareModalButton enabled={true} />}
-                {userLogged == false && (
-                  <LoginModalButton
-                    onLoginSuccess={(loginResponse: CredentialResponse) =>
-                      handleLoginResponse(loginResponse)
-                    }
-                    onLoginFailure={() => handleLoginResponse()}
-                  />
-                )}
-              </div>
-            ) : null}
+            <div className="flex items-center gap-4">
+              {userLogged == true && <ShareModalButton enabled={true} />}
+              {userLogged == false ? (
+                <LoginModalButton
+                  onLoginSuccess={(loginResponse: CredentialResponse) =>
+                    handleLoginResponse(loginResponse)
+                  }
+                  onLoginFailure={() => handleLoginResponse()}
+                />
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Avatar className="cursor-pointer">
+                      <AvatarImage src={CurrentUser?.picture_url} />
+                      <AvatarFallback>
+                        {getInitials(CurrentUser?.name)}
+                      </AvatarFallback>
+                      <span className="sr-only">Toggle user menu</span>
+                    </Avatar>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem className="cursor-pointer">
+                      Configurações
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="cursor-pointer">
+                      Sair
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
         </div>
       </nav>
@@ -439,6 +500,7 @@ export default function GiftRegistry() {
                     <Button
                       className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white ml-4"
                       onClick={() => setIsGiftModalOpen(false)}
+                      disabled={stage === "building" ? true : false}
                     >
                       Enviar Mensagem
                     </Button>
