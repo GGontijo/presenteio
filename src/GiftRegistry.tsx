@@ -275,38 +275,40 @@ export default function GiftRegistry() {
                 Presenteio
               </nav>
             ) : null}
-            <div className="flex items-center gap-4">
-              {userLogged == true && <ShareModalButton enabled={true} />}
-              {userLogged == false ? (
-                <LoginModalButton
-                  onLoginSuccess={(loginResponse: CredentialResponse) =>
-                    handleLoginResponse(loginResponse)
-                  }
-                  onLoginFailure={() => handleLoginResponse()}
-                />
-              ) : (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Avatar className="cursor-pointer">
-                      <AvatarImage src={CurrentUser?.picture_url} />
-                      <AvatarFallback>
-                        {getInitials(CurrentUser?.name)}
-                      </AvatarFallback>
-                      <span className="sr-only">Toggle user menu</span>
-                    </Avatar>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem className="cursor-pointer">
-                      Configurações
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="cursor-pointer">
-                      Sair
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
+            {stage === "building" ? (
+              <div className="flex items-center gap-4">
+                {userLogged == true && <ShareModalButton enabled={true} />}
+                {userLogged == false ? (
+                  <LoginModalButton
+                    onLoginSuccess={(loginResponse: CredentialResponse) =>
+                      handleLoginResponse(loginResponse)
+                    }
+                    onLoginFailure={() => handleLoginResponse()}
+                  />
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Avatar className="cursor-pointer">
+                        <AvatarImage src={CurrentUser?.picture_url} />
+                        <AvatarFallback>
+                          {getInitials(CurrentUser?.name)}
+                        </AvatarFallback>
+                        <span className="sr-only">Toggle user menu</span>
+                      </Avatar>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem className="cursor-pointer">
+                        Configurações
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="cursor-pointer">
+                        Sair
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
       </nav>
