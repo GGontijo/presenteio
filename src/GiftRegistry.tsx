@@ -92,6 +92,7 @@ export default function GiftRegistry() {
     setUserId("");
     Cookies.remove("sessionToken");
     Cookies.remove("userId");
+    window.location.reload();
   };
 
   useEffect(() => {
@@ -301,7 +302,10 @@ export default function GiftRegistry() {
                         Configurações
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="cursor-pointer">
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => userLogout()}
+                      >
                         Sair
                       </DropdownMenuItem>
                     </DropdownMenuContent>
