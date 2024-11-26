@@ -380,7 +380,7 @@ export default function GiftRegistry() {
             <img
               src={item.image_url}
               alt={item.image_url}
-              className="w-full h-60 object-cover"
+              className="w-full h-60 object-scale-down"
             />
             <CardContent className="p-4">
               <div className="flex justify-between">
