@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Cookie, PlusCircle } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import React, { useState } from "react";
 import {
   Select,
@@ -56,7 +56,7 @@ interface GiftObject {
 }
 
 interface UserObject {
-  id?: number; // TODO: Obter id do retorno da API
+  id: number;
   name: string;
   email: string;
   picture_url: string;
@@ -75,8 +75,21 @@ export default function GiftRegistry() {
   // TODO: Obter page_id por meio de domains
   const page_id = 1;
 
-  const [gifts, setGifts] = useState<ItemObject[]>([]);
-  const [newGift, setNewGift] = useState({
+  // bulding, preview
+  const [stage, setStage] = useState("building");
+  const [items, setItems] = useState<ItemObject[]>([]);
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
+  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [selectedGift, setSelectedGift] = useState<ItemObject | null>(null);
+  const [CurrentUser, setCurrentUser] = useState<UserObject | null>(null);
+  const [paymentForm, setPaymentForm] = useState("");
+  const [sendMessage, setSendMessage] = useState(false);
+  const [userLogged, setUserLogged] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+
+  const [newItem, setNewItem] = useState({
     id: 0,
     name: "",
     desc: "",
@@ -85,18 +98,57 @@ export default function GiftRegistry() {
     payment_form: "",
     payment_info: "",
   });
-
-  const [sessionToken, setSessionToken] = useState("");
-  const [userId, setUserId] = useState("");
-
   const userLogout = () => {
     setUserLogged(false);
     setSessionToken("");
-    setUserId("");
     Cookies.remove("sessionToken");
-    Cookies.remove("userId");
     window.location.reload();
   };
+
+  const resetNewItem = () => {
+    setNewItem({
+      id: 0,
+      name: "",
+      desc: "",
+      image_url: "",
+      value: 0,
+      payment_form: "",
+      payment_info: "",
+    });
+  };
+
+  useEffect(() => {
+    // Carregamento inicial da página
+    const fetchUser = async () => {
+      try {
+        const decodedLoadedSessionToken = jwtDecode<JwtObject>(
+          loadedSessionToken as string
+        );
+        const loadedSessionUserId = decodedLoadedSessionToken.sub;
+        const response = await api.get(`/users/${loadedSessionUserId}`);
+        setCurrentUser(response.data);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    const fetchItems = async () => {
+      console.log(loadedSessionToken);
+      try {
+        const response = await api.get("/items");
+        setItems(response.data);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    const loadedSessionToken = Cookies.get("sessionToken");
+    if (loadedSessionToken) {
+      fetchUser();
+      setUserLogged(true);
+      fetchItems();
+    }
+  }, []);
 
   useEffect(() => {
     if (sessionToken) {
@@ -108,41 +160,9 @@ export default function GiftRegistry() {
     }
   }, [sessionToken]);
 
-  useEffect(() => {
-    if (userId) {
-      Cookies.set("userId", userId, {
-        expires: 1,
-        path: "/",
-        secure: false,
-      });
-    }
-  }, [userId]);
-
-  const [title, setTitle] = useState("");
-  const [message, setMessage] = useState("");
-  const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
-  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
-  const [selectedGift, setSelectedGift] = useState<ItemObject | null>(null);
-  const [CurrentUser, setCurrentUser] = useState<UserObject | null>(null);
-  const [paymentForm, setPaymentForm] = useState("");
-
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const response = await api.get("/items");
-        setGifts(response.data);
-        console.log(response.data);
-      } catch (err) {
-        console.log(err);
-      }
-    };
-
-    fetchItems();
-  }, []); // O array vazio garante que o efeito seja executado apenas uma vez, ao montar o componente
-
   const handlePaymentFormChange = (value: string) => {
     setPaymentForm(value);
-    setNewGift({ ...newGift, payment_form: value });
+    setNewItem({ ...newItem, payment_form: value });
   };
 
   const getInitials = (fullName: string | undefined) => {
@@ -159,35 +179,33 @@ export default function GiftRegistry() {
     return (firstInitial + lastInitial).toUpperCase();
   };
 
-  // bulding, preview
-  const [stage, setStage] = useState("building");
-
-  const [sendMessage, setSendMessage] = useState(false);
-
-  const [userLogged, setUserLogged] = useState(false);
-
-  const addItem = (e: React.FormEvent) => {
+  const addItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
-      newGift.name &&
-      newGift.image_url &&
-      newGift.value &&
-      newGift.payment_form
+      newItem.name &&
+      newItem.image_url &&
+      newItem.value &&
+      newItem.payment_form
     ) {
-      const response = api.post("/items", newGift);
-      console.log(response);
+      try {
+        const responseNewItem = await api.post("/items", newItem);
+        console.log(responseNewItem);
 
-      setGifts([...gifts, { ...newGift }]);
-      setNewGift({
-        id: 0,
-        name: "",
-        desc: "",
-        image_url: "",
-        value: 0,
-        payment_form: "",
-        payment_info: "",
-      });
-      setIsAddItemModalOpen(false);
+        const createdItem = await responseNewItem.data;
+
+        setItems([...items, { ...createdItem }]);
+        resetNewItem();
+
+        const responseNewPageItem = api.post(
+          `/pages/${page_id}/items/${createdItem.id}`,
+          newItem
+        );
+
+        console.log(responseNewPageItem);
+        setIsAddItemModalOpen(false);
+      } catch (err) {
+        console.log(err);
+      }
     }
   };
 
@@ -220,8 +238,12 @@ export default function GiftRegistry() {
             auth_provider: "google",
           });
           console.log(response.data);
-          setSessionToken(loginResponse.credential as string);
-          setUserId(response.data.id);
+          console.log(response.headers);
+
+          const responseToken = response.headers["Authorization"];
+          console.log(responseToken);
+
+          setSessionToken(responseToken?.split("Bearer ")[1] as string);
           setCurrentUser(response.data);
           setUserLogged(true);
         } catch (err) {
@@ -240,11 +262,9 @@ export default function GiftRegistry() {
   };
 
   function removeItem(id: number): void {
-    const response = api.delete("/items/" + id, {
-      headers: { Authorization: `Bearer ${sessionToken}` },
-    });
+    const response = api.delete(`/items/${id}`);
     console.log(response);
-    setGifts(gifts.filter((gift) => gift.id !== id));
+    setItems(items.filter((gift) => gift.id !== id));
   }
 
   return (
@@ -366,7 +386,7 @@ export default function GiftRegistry() {
           </header>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {gifts.map((item) => (
+            {items.map((item) => (
               <Card
                 key={item.id}
                 className="overflow-hidden transition-shadow hover:shadow-lg"
@@ -421,7 +441,7 @@ export default function GiftRegistry() {
       ) : (
         <div>
           <h1 className="text-center text-xl text-gray-600">
-            Faça login para adicionar itens
+            Faça login para criar a sua página
           </h1>
         </div>
       )}
@@ -547,9 +567,9 @@ export default function GiftRegistry() {
               </Label>
               <Input
                 id="itemName"
-                value={newGift.name}
+                value={newItem.name}
                 onChange={(e) =>
-                  setNewGift({ ...newGift, name: e.target.value })
+                  setNewItem({ ...newItem, name: e.target.value })
                 }
                 placeholder="Cafeteira Black Decker"
                 required
@@ -561,9 +581,9 @@ export default function GiftRegistry() {
               </Label>
               <Input
                 id="giftImage"
-                value={newGift.image_url}
+                value={newItem.image_url}
                 onChange={(e) =>
-                  setNewGift({ ...newGift, image_url: e.target.value })
+                  setNewItem({ ...newItem, image_url: e.target.value })
                 }
                 placeholder="https://exemplo.com/imagem.jpg"
                 required
@@ -599,11 +619,11 @@ export default function GiftRegistry() {
                   id="giftValue"
                   type="text"
                   value={
-                    newGift.value
+                    newItem.value
                       ? new Intl.NumberFormat("pt-BR", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
-                        }).format(newGift.value)
+                        }).format(newItem.value)
                       : ""
                   }
                   onChange={(e) => {
@@ -616,7 +636,7 @@ export default function GiftRegistry() {
                     const floatValue = Number(value) / 100;
 
                     // Atualiza o estado com o valor numérico
-                    setNewGift({ ...newGift, value: floatValue });
+                    setNewItem({ ...newItem, value: floatValue });
                   }}
                   placeholder="0,00"
                   inputMode="decimal"
@@ -646,9 +666,9 @@ export default function GiftRegistry() {
               </Label>
               <Input
                 id="itemPaymentInfo"
-                value={newGift.payment_info}
+                value={newItem.payment_info}
                 onChange={(e) =>
-                  setNewGift({ ...newGift, payment_info: e.target.value })
+                  setNewItem({ ...newItem, payment_info: e.target.value })
                 }
                 placeholder={
                   paymentForm === "pix"

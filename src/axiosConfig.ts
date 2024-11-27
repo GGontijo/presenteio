@@ -1,14 +1,14 @@
 import axios from 'axios';
+import Cookies from "js-cookie";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 // Criação da instância do axios com configurações padrão
 const api = axios.create({
   baseURL: apiBaseUrl, // Substitua pelo seu endpoint base
-  timeout: 10000, // Tempo máximo de espera em ms
+  timeout: 60000, // Tempo máximo de espera em ms
   headers: {
     'Content-Type': 'application/json',
-    'user-id': 1,
     // Outros cabeçalhos personalizados, se necessário
   },
 });
@@ -17,10 +17,11 @@ const api = axios.create({
 api.interceptors.request.use(
   config => {
     // Adicione tokens de autenticação ou outras modificações nas requisições aqui
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const sessionToken = Cookies.get("sessionToken");
+    if (sessionToken) {
+      config.headers.authorization = `Bearer ${sessionToken}`;
     }
+
     return config;
   },
   error => {
