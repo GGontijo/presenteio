@@ -72,6 +72,9 @@ interface JwtObject {
 }
 
 export default function GiftRegistry() {
+  // TODO: Obter page_id por meio de domains
+  const page_id = 1;
+
   const [gifts, setGifts] = useState<ItemObject[]>([]);
   const [newGift, setNewGift] = useState({
     id: 0,
@@ -156,8 +159,8 @@ export default function GiftRegistry() {
     return (firstInitial + lastInitial).toUpperCase();
   };
 
+  // bulding, preview
   const [stage, setStage] = useState("building");
-  const stages = ["building", "preview"];
 
   const [sendMessage, setSendMessage] = useState(false);
 
@@ -237,7 +240,9 @@ export default function GiftRegistry() {
   };
 
   function removeItem(id: number): void {
-    const response = api.delete("/items/" + id);
+    const response = api.delete("/items/" + id, {
+      headers: { Authorization: `Bearer ${sessionToken}` },
+    });
     console.log(response);
     setGifts(gifts.filter((gift) => gift.id !== id));
   }
@@ -317,99 +322,109 @@ export default function GiftRegistry() {
         </div>
       </nav>
       <div className="my-2 h-6"></div>
-      <header className="text-center mb-12 space-y-4 ">
-        {stage === "building" ? (
-          <input
-            type="text"
-            value={title}
-            maxLength={50}
-            placeholder="Clique para adicionar um título"
-            onChange={(e) => setTitle(e.target.value)}
-            className="text-4xl font-bold text-slate-800 mb-4 bg-transparent border-black border text-center w-full"
-          />
-        ) : (
-          <input
-            type="text"
-            disabled
-            value={title}
-            maxLength={50}
-            onChange={(e) => setTitle(e.target.value)}
-            className="text-4xl font-bold text-slate-800 mb-4 bg-transparent text-center w-full"
-          />
-        )}
-        {stage === "building" ? (
-          <textarea
-            value={message}
-            placeholder="Clique para adicionar uma descrição"
-            onChange={(e) => setMessage(e.target.value)}
-            maxLength={250}
-            className="text-gray-800 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none"
-            rows={3}
-          />
-        ) : (
-          <textarea
-            value={message}
-            disabled
-            onChange={(e) => setMessage(e.target.value)}
-            maxLength={250}
-            className="text-gray-600 max-w-2xl mx-auto bg-transparent text-center w-full resize-none"
-            rows={3}
-          />
-        )}
-      </header>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {gifts.map((item) => (
-          <Card
-            key={item.id}
-            className="overflow-hidden transition-shadow hover:shadow-lg"
-          >
-            {stage === "building" && (
-              <div className="flex">
-                <Button className="w-full bg-blue-400 h-8 hover:bg-blue-500">
-                  Editar Item
-                </Button>
-                <Button
-                  className="bg-gray-500 h-8 hover:bg-red-500"
-                  onClick={() => removeItem(item.id)}
-                >
-                  Remover
-                </Button>
-              </div>
+      {userLogged ? (
+        <div>
+          <header className="text-center mb-12 space-y-4 ">
+            {stage === "building" ? (
+              <input
+                type="text"
+                value={title}
+                maxLength={50}
+                placeholder="Clique para adicionar um título"
+                onChange={(e) => setTitle(e.target.value)}
+                className="text-4xl font-bold text-slate-800 mb-4 bg-transparent border-black border text-center w-full"
+              />
+            ) : (
+              <input
+                type="text"
+                disabled
+                value={title}
+                maxLength={50}
+                onChange={(e) => setTitle(e.target.value)}
+                className="text-4xl font-bold text-slate-800 mb-4 bg-transparent text-center w-full"
+              />
             )}
-            <img
-              src={item.image_url}
-              alt={item.image_url}
-              className="w-full h-60 object-scale-down"
-            />
-            <CardContent className="p-4">
-              <div className="flex justify-between">
-                <p className="text-xl mb-2 text-center font-serif">
-                  {item.name}
-                </p>
-                <p className="mb-2 text-xl font-mono text-center text-gray-700">
-                  R$ {item.value}
-                </p>
-              </div>
-              <p className="text-sm mb-2 text-center">{item.desc}</p>
-              <Button onClick={() => openModal(item)} className="w-full">
-                Presentear
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-        {stage === "building" && (
-          <Card
-            className="flex py-4 items-center justify-center cursor-pointer"
-            onClick={() => setIsAddItemModalOpen(true)}
-          >
-            <CardContent className="text-center">
-              <PlusCircle className="mx-auto mb-2 h-14 w-12 text-gray-400" />
-              <p className="text-gray-600">Adicionar Novo Item</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            {stage === "building" ? (
+              <textarea
+                value={message}
+                placeholder="Clique para adicionar uma descrição"
+                onChange={(e) => setMessage(e.target.value)}
+                maxLength={250}
+                className="text-gray-800 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none"
+                rows={3}
+              />
+            ) : (
+              <textarea
+                value={message}
+                disabled
+                onChange={(e) => setMessage(e.target.value)}
+                maxLength={250}
+                className="text-gray-600 max-w-2xl mx-auto bg-transparent text-center w-full resize-none"
+                rows={3}
+              />
+            )}
+          </header>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {gifts.map((item) => (
+              <Card
+                key={item.id}
+                className="overflow-hidden transition-shadow hover:shadow-lg"
+              >
+                {stage === "building" && (
+                  <div className="flex">
+                    <Button className="w-full bg-blue-400 h-8 hover:bg-blue-500">
+                      Editar Item
+                    </Button>
+                    <Button
+                      className="bg-gray-500 h-8 hover:bg-red-500"
+                      onClick={() => removeItem(item.id)}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                )}
+                <img
+                  src={item.image_url}
+                  alt={item.image_url}
+                  className="w-full h-60 object-scale-down"
+                />
+                <CardContent className="p-4">
+                  <div className="flex justify-between">
+                    <p className="text-xl mb-2 text-center font-serif">
+                      {item.name}
+                    </p>
+                    <p className="mb-2 text-xl font-mono text-center text-gray-700">
+                      R$ {item.value}
+                    </p>
+                  </div>
+                  <p className="text-sm mb-2 text-center">{item.desc}</p>
+                  <Button onClick={() => openModal(item)} className="w-full">
+                    Presentear
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+            {stage === "building" && (
+              <Card
+                className="flex py-4 items-center justify-center cursor-pointer"
+                onClick={() => setIsAddItemModalOpen(true)}
+              >
+                <CardContent className="text-center">
+                  <PlusCircle className="mx-auto mb-2 h-14 w-12 text-gray-400" />
+                  <p className="text-gray-600">Adicionar Novo Item</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div>
+          <h1 className="text-center text-xl text-gray-600">
+            Faça login para adicionar itens
+          </h1>
+        </div>
+      )}
 
       <Dialog open={isGiftModalOpen} onOpenChange={setIsGiftModalOpen}>
         <DialogContent>
