@@ -35,7 +35,13 @@ api.interceptors.response.use(
     return response;
   },
   error => {
-    // Tratar erros globais aqui
+    if (error.response?.status === 401) {
+      // Remove o cookie de sessão
+      Cookies.remove("sessionToken");
+
+      // Opcional: Recarrega a página (para resetar o estado do componente)
+      window.location.reload();
+    }
     console.error('Erro na resposta:', error);
     return Promise.reject(error);
   }

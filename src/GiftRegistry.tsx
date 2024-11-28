@@ -1,8 +1,11 @@
+"use client";
+
 import api from "@/axiosConfig";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Cookies from "js-cookie";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -35,15 +38,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu";
+import { ToastAction } from "./components/ui/toast";
+
+interface PageObject {
+  id?: number;
+  domain?: string;
+  title?: string;
+  description?: string;
+  picture_url?: string;
+}
 
 interface ItemObject {
-  id: number; // TODO: Obter id do retorno da API
-  name: string;
-  desc: string;
-  image_url: string;
-  value: number;
-  payment_form: string;
-  payment_info: string;
+  id?: number; // TODO: Obter id do retorno da API
+  name?: string;
+  desc?: string;
+  image_url?: string;
+  value?: number;
+  payment_form?: string;
+  payment_info?: string;
 }
 
 interface GiftObject {
@@ -72,9 +84,6 @@ interface JwtObject {
 }
 
 export default function GiftRegistry() {
-  // TODO: Obter page_id por meio de domains
-  const page_id = 1;
-
   // bulding, preview
   const [stage, setStage] = useState("building");
   const [items, setItems] = useState<ItemObject[]>([]);
@@ -82,43 +91,39 @@ export default function GiftRegistry() {
   const [message, setMessage] = useState("");
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [isDomainDialogOpen, setIsDomainDialogOpen] = useState(false);
   const [selectedGift, setSelectedGift] = useState<ItemObject | null>(null);
   const [CurrentUser, setCurrentUser] = useState<UserObject | null>(null);
+  const [CurrentUserPage, setCurrentUserPage] = useState<PageObject | null>(
+    null
+  );
   const [paymentForm, setPaymentForm] = useState("");
   const [sendMessage, setSendMessage] = useState(false);
   const [userLogged, setUserLogged] = useState(false);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [newPageName, setNewPageName] = useState("");
+  const baseDomain = import.meta.env.VITE_BASE_URL;
+  const { toast } = useToast();
 
-  const [newItem, setNewItem] = useState({
-    id: 0,
-    name: "",
-    desc: "",
-    image_url: "",
-    value: 0,
-    payment_form: "",
-    payment_info: "",
-  });
+  const [newItem, setNewItem] = useState<ItemObject | null>(null);
+
+  const [newPage, setNewPage] = useState<PageObject | null>(null);
+
   const userLogout = () => {
+    setCurrentUser(null);
     setUserLogged(false);
-    setSessionToken("");
+    setSessionToken(null);
     Cookies.remove("sessionToken");
     window.location.reload();
   };
 
   const resetNewItem = () => {
-    setNewItem({
-      id: 0,
-      name: "",
-      desc: "",
-      image_url: "",
-      value: 0,
-      payment_form: "",
-      payment_info: "",
-    });
+    setNewItem(null);
   };
 
   useEffect(() => {
     // Carregamento inicial da página
+
     const fetchUser = async () => {
       try {
         const decodedLoadedSessionToken = jwtDecode<JwtObject>(
@@ -126,7 +131,27 @@ export default function GiftRegistry() {
         );
         const loadedSessionUserId = decodedLoadedSessionToken.sub;
         const response = await api.get(`/users/${loadedSessionUserId}`);
-        setCurrentUser(response.data);
+        if (response.status === 200) {
+          setCurrentUser(response.data);
+          setUserLogged(true);
+        } else {
+          userLogout();
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    const fetchUserPage = async () => {
+      try {
+        console.log("teste");
+        const response = await api.get("/pages");
+        if (response.data && response.data.length > 0) {
+          setCurrentUserPage(response.data[0]);
+        } else {
+          setCurrentUserPage(null);
+          setIsDomainDialogOpen(true);
+        }
       } catch (err) {
         console.log(err);
       }
@@ -141,13 +166,16 @@ export default function GiftRegistry() {
         console.log(err);
       }
     };
-
     const loadedSessionToken = Cookies.get("sessionToken");
+    console.log(loadedSessionToken);
     if (loadedSessionToken) {
       fetchUser();
-      setUserLogged(true);
+      fetchUserPage();
       fetchItems();
     }
+    fetchUser();
+    fetchUserPage();
+    fetchItems();
   }, []);
 
   useEffect(() => {
@@ -158,7 +186,18 @@ export default function GiftRegistry() {
         secure: true,
       });
     }
-  }, [sessionToken]);
+  }, [sessionToken, userLogged]);
+
+  const createBlankPage = async (domain: string) => {
+    setNewPage({
+      domain: domain,
+    });
+    const response = await api.post("/pages", newPage);
+    if (response.status === 201) {
+      return;
+    }
+    setCurrentUserPage(response.data);
+  };
 
   const handlePaymentFormChange = (value: string) => {
     setPaymentForm(value);
@@ -182,10 +221,10 @@ export default function GiftRegistry() {
   const addItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
-      newItem.name &&
-      newItem.image_url &&
-      newItem.value &&
-      newItem.payment_form
+      newItem?.name &&
+      newItem?.image_url &&
+      newItem?.value &&
+      newItem?.payment_form
     ) {
       try {
         const responseNewItem = await api.post("/items", newItem);
@@ -197,7 +236,7 @@ export default function GiftRegistry() {
         resetNewItem();
 
         const responseNewPageItem = api.post(
-          `/pages/${page_id}/items/${createdItem.id}`,
+          `/pages/${CurrentUserPage?.id}/items/${createdItem.id}`,
           newItem
         );
 
@@ -205,43 +244,51 @@ export default function GiftRegistry() {
         setIsAddItemModalOpen(false);
       } catch (err) {
         console.log(err);
+        toast({
+          title: "Houve um erro ao tentar adicionar o item.",
+          description: "Erro ao adicionar o item. Tente mais tarde.",
+          action: <ToastAction altText="Tentar novamente" onClick={addItem} />,
+        });
       }
     }
   };
 
-  const openModal = (gift: ItemObject) => {
+  const openGiftModal = (gift: ItemObject) => {
     setSendMessage(false);
     setSelectedGift(gift);
     setIsGiftModalOpen(true);
   };
 
-  const closeModal = () => {
+  const closeGiftModal = () => {
     setIsGiftModalOpen(false);
     setSelectedGift(null);
   };
 
-  const handleLoginResponse = async (loginResponse?: CredentialResponse) => {
-    console.log(loginResponse);
-    if (loginResponse) {
+  const handlePageNameFormat = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const sanitizedValue = e.target.value
+      .replace(/[^a-z0-9-]/g, "")
+      .toLowerCase();
+    setNewPageName(sanitizedValue);
+  };
+
+  const handleGoogleLoginResponse = async (
+    GoogleLoginResponse?: CredentialResponse
+  ) => {
+    if (GoogleLoginResponse) {
       if (!userLogged) {
         const tokenDecoded = jwtDecode<JwtObject>(
-          loginResponse.credential as string
+          GoogleLoginResponse.credential as string
         );
-
-        console.log(tokenDecoded);
 
         try {
           const response = await api.post("/users", {
             name: tokenDecoded.name,
             email: tokenDecoded.email,
-            bearer_token: loginResponse.credential,
+            bearer_token: GoogleLoginResponse.credential,
             auth_provider: "google",
           });
-          console.log(response.data);
-          console.log(response.headers);
 
-          const responseToken = response.headers["Authorization"];
-          console.log(responseToken);
+          const responseToken = response.headers["authorization"];
 
           setSessionToken(responseToken?.split("Bearer ")[1] as string);
           setCurrentUser(response.data);
@@ -250,9 +297,6 @@ export default function GiftRegistry() {
           console.log(err);
         }
       }
-    } else {
-      setUserLogged(false);
-      userLogout();
     }
   };
 
@@ -261,10 +305,23 @@ export default function GiftRegistry() {
     alert(`"Valor copiado: ${text}!"`);
   };
 
-  function removeItem(id: number): void {
-    const response = api.delete(`/items/${id}`);
-    console.log(response);
-    setItems(items.filter((gift) => gift.id !== id));
+  async function removeItem(id: number): Promise<void> {
+    const response = await api.delete(`/items/${id}`);
+    if (response.status === 200) {
+      setItems(items.filter((gift) => gift.id !== id));
+    } else {
+      console.log(response.data);
+      toast({
+        title: "Houve um erro ao tentar remover o item.",
+        description: "Erro ao remover o item. Tente mais tarde.",
+        action: (
+          <ToastAction
+            altText="Tentar novamente"
+            onClick={() => removeItem(id)}
+          />
+        ),
+      });
+    }
   }
 
   return (
@@ -307,9 +364,9 @@ export default function GiftRegistry() {
                 {userLogged == false ? (
                   <LoginModalButton
                     onLoginSuccess={(loginResponse: CredentialResponse) =>
-                      handleLoginResponse(loginResponse)
+                      handleGoogleLoginResponse(loginResponse)
                     }
-                    onLoginFailure={() => handleLoginResponse()}
+                    onLoginFailure={() => handleGoogleLoginResponse()}
                   />
                 ) : (
                   <DropdownMenu>
@@ -343,104 +400,172 @@ export default function GiftRegistry() {
       </nav>
       <div className="my-2 h-6"></div>
       {userLogged ? (
-        <div>
-          <header className="text-center mb-12 space-y-4 ">
-            {stage === "building" ? (
-              <input
-                type="text"
-                value={title}
-                maxLength={50}
-                placeholder="Clique para adicionar um título"
-                onChange={(e) => setTitle(e.target.value)}
-                className="text-4xl font-bold text-slate-800 mb-4 bg-transparent border-black border text-center w-full"
-              />
-            ) : (
-              <input
-                type="text"
-                disabled
-                value={title}
-                maxLength={50}
-                onChange={(e) => setTitle(e.target.value)}
-                className="text-4xl font-bold text-slate-800 mb-4 bg-transparent text-center w-full"
-              />
-            )}
-            {stage === "building" ? (
-              <textarea
-                value={message}
-                placeholder="Clique para adicionar uma descrição"
-                onChange={(e) => setMessage(e.target.value)}
-                maxLength={250}
-                className="text-gray-800 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none"
-                rows={3}
-              />
-            ) : (
-              <textarea
-                value={message}
-                disabled
-                onChange={(e) => setMessage(e.target.value)}
-                maxLength={250}
-                className="text-gray-600 max-w-2xl mx-auto bg-transparent text-center w-full resize-none"
-                rows={3}
-              />
-            )}
-          </header>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {items.map((item) => (
-              <Card
-                key={item.id}
-                className="overflow-hidden transition-shadow hover:shadow-lg"
-              >
-                {stage === "building" && (
-                  <div className="flex">
-                    <Button className="w-full bg-blue-400 h-8 hover:bg-blue-500">
-                      Editar Item
-                    </Button>
-                    <Button
-                      className="bg-gray-500 h-8 hover:bg-red-500"
-                      onClick={() => removeItem(item.id)}
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                )}
-                <img
-                  src={item.image_url}
-                  alt={item.image_url}
-                  className="w-full h-60 object-scale-down"
+        CurrentUserPage ? (
+          <div>
+            <header className="text-center mb-12 space-y-4 ">
+              {stage === "building" ? (
+                <input
+                  type="text"
+                  value={title}
+                  maxLength={50}
+                  placeholder="Clique para adicionar um título"
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="text-4xl font-bold text-slate-800 mb-4 bg-transparent border-black border text-center w-full"
                 />
-                <CardContent className="p-4">
-                  <div className="flex justify-between">
-                    <p className="text-xl mb-2 text-center font-serif">
-                      {item.name}
-                    </p>
-                    <p className="mb-2 text-xl font-mono text-center text-gray-700">
-                      R$ {item.value}
-                    </p>
-                  </div>
-                  <p className="text-sm mb-2 text-center">{item.desc}</p>
-                  <Button onClick={() => openModal(item)} className="w-full">
-                    Presentear
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-            {stage === "building" && (
-              <Card
-                className="flex py-4 items-center justify-center cursor-pointer"
-                onClick={() => setIsAddItemModalOpen(true)}
-              >
-                <CardContent className="text-center">
-                  <PlusCircle className="mx-auto mb-2 h-14 w-12 text-gray-400" />
-                  <p className="text-gray-600">Adicionar Novo Item</p>
-                </CardContent>
-              </Card>
-            )}
+              ) : (
+                <input
+                  type="text"
+                  disabled
+                  value={title}
+                  maxLength={50}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="text-4xl font-bold text-slate-800 mb-4 bg-transparent text-center w-full"
+                />
+              )}
+              {stage === "building" ? (
+                <textarea
+                  value={message}
+                  placeholder="Clique para adicionar uma descrição"
+                  onChange={(e) => setMessage(e.target.value)}
+                  maxLength={250}
+                  className="text-gray-800 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none"
+                  rows={3}
+                />
+              ) : (
+                <textarea
+                  value={message}
+                  disabled
+                  onChange={(e) => setMessage(e.target.value)}
+                  maxLength={250}
+                  className="text-gray-600 max-w-2xl mx-auto bg-transparent text-center w-full resize-none"
+                  rows={3}
+                />
+              )}
+            </header>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {items.map((item) => (
+                <Card
+                  key={item.id}
+                  className="overflow-hidden transition-shadow hover:shadow-lg"
+                >
+                  {stage === "building" && (
+                    <div className="flex">
+                      <Button className="w-full bg-blue-400 h-8 hover:bg-blue-500">
+                        Editar Item
+                      </Button>
+                      <Button
+                        className="bg-gray-500 h-8 hover:bg-red-500"
+                        onClick={() => removeItem(item?.id as number)}
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  )}
+                  <img
+                    src={item.image_url}
+                    alt={item.image_url}
+                    className="w-full h-60 object-scale-down"
+                  />
+                  <CardContent className="p-4">
+                    <div className="flex justify-between">
+                      <p className="text-xl mb-2 text-center font-serif">
+                        {item.name}
+                      </p>
+                      <p className="mb-2 text-xl font-mono text-center text-gray-700">
+                        R$ {item.value}
+                      </p>
+                    </div>
+                    <p className="text-sm mb-2 text-center">{item.desc}</p>
+                    <Button
+                      onClick={() => openGiftModal(item)}
+                      className="w-full"
+                    >
+                      Presentear
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+              {stage === "building" && (
+                <Card
+                  className="flex py-4 items-center justify-center cursor-pointer"
+                  onClick={() => setIsAddItemModalOpen(true)}
+                >
+                  <CardContent className="text-center">
+                    <PlusCircle className="mx-auto mb-2 h-14 w-12 text-gray-400" />
+                    <p className="text-gray-600">Adicionar Novo Item</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <Dialog
+            open={isDomainDialogOpen}
+            onOpenChange={setIsDomainDialogOpen}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Vamos criar a sua página!</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Input
+                  type="text"
+                  placeholder="Escolha um identificador para a sua página"
+                  value={newPageName}
+                  onChange={handlePageNameFormat}
+                />
+                {newPageName && (
+                  <p className="text-gray-600">
+                    O link da sua página será:{" "}
+                    <span className="font-bold">{`${baseDomain}/${newPageName}`}</span>
+                  </p>
+                )}
+                <Button
+                  onClick={() => {
+                    if (!newPageName.trim()) {
+                      // Exibir um toast de erro se o campo estiver vazio
+                      toast({
+                        title: "Erro ao criar a página",
+                        description:
+                          "Por favor, informe um identificador válido.",
+                        variant: "destructive", // Estilo de erro, se configurado
+                        action: (
+                          <ToastAction altText="Entendi">Entendi</ToastAction>
+                        ),
+                      });
+                      return; // Impedir a execução de createBlankPage
+                    }
+
+                    // Se o campo for válido, continue
+                    createBlankPage(newPageName).then(() => {
+                      if (!CurrentUserPage) {
+                        toast({
+                          title: "O domínio escolhido já está em uso!",
+                          description: "Por favor, escolha outro domínio.",
+                          variant: "destructive",
+                          action: (
+                            <ToastAction altText="Entendi">Entendi</ToastAction>
+                          ),
+                        });
+                      } else {
+                        toast({
+                          title: "Página criada com sucesso!",
+                          description: `O link é ${baseDomain}/${newPageName}.`,
+                        });
+                      }
+                    });
+                  }}
+                >
+                  Confirmar
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )
       ) : (
         <div>
-          <h1 className="text-center text-xl text-gray-600">
+          <h1 className="text-center text-xl text-gray-500">
             Faça login para criar a sua página
           </h1>
         </div>
@@ -462,7 +587,7 @@ export default function GiftRegistry() {
               />
               <p className="mb-4">{selectedGift.desc}</p>
               <p className="mb-2 text-3xl font-mono font-bold">
-                {"R$" + selectedGift.value.toFixed(2)}
+                {"R$" + selectedGift?.value?.toFixed(2)}
               </p>
               <div className="space-y-5">
                 <p className="text-gray-800">
@@ -478,7 +603,9 @@ export default function GiftRegistry() {
                   />
                   <Button
                     className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
-                    onClick={() => copyToClipboard(selectedGift?.payment_info)}
+                    onClick={() =>
+                      copyToClipboard(selectedGift.payment_info as string)
+                    }
                   >
                     Copiar
                   </Button>
@@ -540,7 +667,7 @@ export default function GiftRegistry() {
                     </div>
                     <Button
                       className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white ml-4"
-                      onClick={() => setIsGiftModalOpen(false)}
+                      onClick={() => closeGiftModal()}
                       disabled={stage === "building" ? true : false}
                     >
                       Enviar Mensagem
@@ -567,7 +694,7 @@ export default function GiftRegistry() {
               </Label>
               <Input
                 id="itemName"
-                value={newItem.name}
+                value={newItem?.name}
                 onChange={(e) =>
                   setNewItem({ ...newItem, name: e.target.value })
                 }
@@ -581,7 +708,7 @@ export default function GiftRegistry() {
               </Label>
               <Input
                 id="giftImage"
-                value={newItem.image_url}
+                value={newItem?.image_url}
                 onChange={(e) =>
                   setNewItem({ ...newItem, image_url: e.target.value })
                 }
@@ -619,11 +746,11 @@ export default function GiftRegistry() {
                   id="giftValue"
                   type="text"
                   value={
-                    newItem.value
+                    newItem?.value
                       ? new Intl.NumberFormat("pt-BR", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
-                        }).format(newItem.value)
+                        }).format(newItem?.value)
                       : ""
                   }
                   onChange={(e) => {
@@ -666,7 +793,7 @@ export default function GiftRegistry() {
               </Label>
               <Input
                 id="itemPaymentInfo"
-                value={newItem.payment_info}
+                value={newItem?.payment_info}
                 onChange={(e) =>
                   setNewItem({ ...newItem, payment_info: e.target.value })
                 }
