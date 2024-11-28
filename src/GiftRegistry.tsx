@@ -100,21 +100,26 @@ export default function GiftRegistry() {
   const [paymentForm, setPaymentForm] = useState("");
   const [sendMessage, setSendMessage] = useState(false);
   const [userLogged, setUserLogged] = useState(false);
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [newPageName, setNewPageName] = useState("");
   const baseDomain = import.meta.env.VITE_BASE_URL;
   const { toast } = useToast();
 
   const [newItem, setNewItem] = useState<ItemObject | null>(null);
 
-  const [newPage, setNewPage] = useState<PageObject | null>(null);
-
   const userLogout = () => {
     setCurrentUser(null);
     setUserLogged(false);
-    setSessionToken(null);
     Cookies.remove("sessionToken");
     window.location.reload();
+  };
+
+  const userLogin = (token: string) => {
+    setUserLogged(true);
+    Cookies.set("sessionToken", token, {
+      expires: 1,
+      path: "/",
+      secure: true,
+    });
   };
 
   const resetNewItem = () => {
@@ -123,7 +128,6 @@ export default function GiftRegistry() {
 
   useEffect(() => {
     // Carregamento inicial da página
-
     const fetchUser = async () => {
       try {
         const decodedLoadedSessionToken = jwtDecode<JwtObject>(
@@ -133,7 +137,7 @@ export default function GiftRegistry() {
         const response = await api.get(`/users/${loadedSessionUserId}`);
         if (response.status === 200) {
           setCurrentUser(response.data);
-          setUserLogged(true);
+          userLogin(loadedSessionToken as string);
         } else {
           userLogout();
         }
@@ -144,13 +148,11 @@ export default function GiftRegistry() {
 
     const fetchUserPage = async () => {
       try {
-        console.log("teste");
         const response = await api.get("/pages");
         if (response.data && response.data.length > 0) {
           setCurrentUserPage(response.data[0]);
         } else {
           setCurrentUserPage(null);
-          setIsDomainDialogOpen(true);
         }
       } catch (err) {
         console.log(err);
@@ -158,7 +160,6 @@ export default function GiftRegistry() {
     };
 
     const fetchItems = async () => {
-      console.log(loadedSessionToken);
       try {
         const response = await api.get("/items");
         setItems(response.data);
@@ -173,30 +174,24 @@ export default function GiftRegistry() {
       fetchUserPage();
       fetchItems();
     }
-    fetchUser();
-    fetchUserPage();
-    fetchItems();
   }, []);
 
   useEffect(() => {
-    if (sessionToken) {
-      Cookies.set("sessionToken", sessionToken, {
-        expires: 1,
-        path: "/",
-        secure: true,
-      });
+    if (!CurrentUserPage) {
+      setIsDomainDialogOpen(true);
     }
-  }, [sessionToken, userLogged]);
+  }, [CurrentUserPage]);
 
   const createBlankPage = async (domain: string) => {
-    setNewPage({
+    const newPage = {
       domain: domain,
-    });
+    };
     const response = await api.post("/pages", newPage);
-    if (response.status === 201) {
+    if (response.status === 409) {
       return;
     }
     setCurrentUserPage(response.data);
+    return response.data;
   };
 
   const handlePaymentFormChange = (value: string) => {
@@ -265,9 +260,18 @@ export default function GiftRegistry() {
   };
 
   const handlePageNameFormat = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const sanitizedValue = e.target.value
+    let sanitizedValue = e.target.value
       .replace(/[^a-z0-9-]/g, "")
       .toLowerCase();
+    if (sanitizedValue === "error") {
+      toast({
+        title: "Nome inválido!",
+        description:
+          "Alguns nomes são reservados para o sistema. Por favor, escolha outro.",
+        variant: "destructive",
+      });
+      sanitizedValue = "";
+    }
     setNewPageName(sanitizedValue);
   };
 
@@ -289,10 +293,8 @@ export default function GiftRegistry() {
           });
 
           const responseToken = response.headers["authorization"];
-
-          setSessionToken(responseToken?.split("Bearer ")[1] as string);
+          userLogin(responseToken?.split("Bearer ")[1] as string);
           setCurrentUser(response.data);
-          setUserLogged(true);
         } catch (err) {
           console.log(err);
         }
@@ -338,15 +340,17 @@ export default function GiftRegistry() {
             {
               <div
                 className={`flex items-center space-x-2 justify-start ${
-                  !userLogged ? "text-transparent" : ""
+                  CurrentUserPage != null && userLogged
+                    ? ""
+                    : "text-transparent"
                 }`}
               >
                 <Switch
-                  className={!userLogged ? "hidden" : ""}
+                  className={userLogged && CurrentUserPage ? "" : "hidden"}
                   onCheckedChange={() =>
                     setStage(stage === "building" ? "preview" : "building")
                   }
-                  disabled={!userLogged}
+                  disabled={!CurrentUserPage || !userLogged}
                   id="preview"
                 />
                 <Label htmlFor="previewMode">Ver como público</Label>
@@ -360,7 +364,9 @@ export default function GiftRegistry() {
             ) : null}
             {stage === "building" ? (
               <div className="flex items-center gap-4">
-                {userLogged == true && <ShareModalButton enabled={true} />}
+                {userLogged && (
+                  <ShareModalButton enabled={CurrentUserPage != null} />
+                )}
                 {userLogged == false ? (
                   <LoginModalButton
                     onLoginSuccess={(loginResponse: CredentialResponse) =>
@@ -500,68 +506,82 @@ export default function GiftRegistry() {
             </div>
           </div>
         ) : (
-          <Dialog
-            open={isDomainDialogOpen}
-            onOpenChange={setIsDomainDialogOpen}
-          >
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Vamos criar a sua página!</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <Input
-                  type="text"
-                  placeholder="Escolha um identificador para a sua página"
-                  value={newPageName}
-                  onChange={handlePageNameFormat}
-                />
-                {newPageName && (
-                  <p className="text-gray-600">
-                    O link da sua página será:{" "}
-                    <span className="font-bold">{`${baseDomain}/${newPageName}`}</span>
-                  </p>
-                )}
-                <Button
-                  onClick={() => {
-                    if (!newPageName.trim()) {
-                      // Exibir um toast de erro se o campo estiver vazio
-                      toast({
-                        title: "Erro ao criar a página",
-                        description:
-                          "Por favor, informe um identificador válido.",
-                        variant: "destructive", // Estilo de erro, se configurado
-                        action: (
-                          <ToastAction altText="Entendi">Entendi</ToastAction>
-                        ),
-                      });
-                      return; // Impedir a execução de createBlankPage
-                    }
-
-                    // Se o campo for válido, continue
-                    createBlankPage(newPageName).then(() => {
-                      if (!CurrentUserPage) {
+          <div className="flex flex-col items-center justify-center">
+            <h1 className="text-2xl font-bold text-gray-600 mb-6 text-center">
+              Você ainda não tem nenhuma página criada, vamos criar uma!
+            </h1>
+            <Button
+              onClick={() => setIsDomainDialogOpen(true)}
+              className="w-full items-center justify-center hover:bg-black hover:text-white"
+              variant={"outline"}
+            >
+              Criar uma página
+            </Button>
+            <Dialog
+              open={isDomainDialogOpen}
+              onOpenChange={setIsDomainDialogOpen}
+            >
+              <DialogContent aria-describedby="dialog-description">
+                <DialogHeader>
+                  <DialogTitle>Vamos criar a sua página!</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Input
+                    type="text"
+                    placeholder="Escolha um identificador para a sua página"
+                    value={newPageName}
+                    onChange={handlePageNameFormat}
+                  />
+                  {newPageName && (
+                    <p className="text-gray-600">
+                      O link da sua página será:{" "}
+                      <span className="font-bold">{`${baseDomain}/${newPageName}`}</span>
+                    </p>
+                  )}
+                  <Button
+                    onClick={() => {
+                      if (!newPageName.trim()) {
+                        // Exibir um toast de erro se o campo estiver vazio
                         toast({
-                          title: "O domínio escolhido já está em uso!",
-                          description: "Por favor, escolha outro domínio.",
-                          variant: "destructive",
+                          title: "Erro ao criar a página",
+                          description:
+                            "Por favor, informe um identificador válido.",
+                          variant: "destructive", // Estilo de erro, se configurado
                           action: (
                             <ToastAction altText="Entendi">Entendi</ToastAction>
                           ),
                         });
-                      } else {
-                        toast({
-                          title: "Página criada com sucesso!",
-                          description: `O link é ${baseDomain}/${newPageName}.`,
-                        });
+                        return; // Impedir a execução de createBlankPage
                       }
-                    });
-                  }}
-                >
-                  Confirmar
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+
+                      // Se o campo for válido, continue
+                      createBlankPage(newPageName).then((pageCreated) => {
+                        if (!pageCreated) {
+                          toast({
+                            title: "O domínio escolhido já está em uso!",
+                            description: "Por favor, escolha outro domínio.",
+                            variant: "destructive",
+                            action: (
+                              <ToastAction altText="Entendi">
+                                Entendi
+                              </ToastAction>
+                            ),
+                          });
+                        } else {
+                          toast({
+                            title: "Página criada com sucesso!",
+                            description: `O link será ${baseDomain}/${newPageName}.`,
+                          });
+                        }
+                      });
+                    }}
+                  >
+                    Confirmar
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         )
       ) : (
         <div>

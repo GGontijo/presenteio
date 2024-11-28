@@ -40,12 +40,30 @@ api.interceptors.response.use(
       Cookies.remove("sessionToken");
 
       // Opcional: Recarrega a página (para resetar o estado do componente)
-      window.location.reload();
+      // window.location.reload();
+    } else {
+      switch (error.code) {
+        case 'ECONNABORTED':
+          console.error('Erro: Timeout - O backend demorou demais para responder.')
+          window.location.href = '/error';
+          break;
+        case 'ENOTFOUND':
+          console.error('Erro: Servidor não encontrado.');
+          window.location.href = '/error';
+          break;
+        case 'ECONNREFUSED':
+          console.error('Erro: Conexão recusada - Não foi possível conectar ao servidor.');
+          window.location.href = '/error';
+          break;
+        case 'ERR_NETWORK':
+          console.error('Erro: Falha de rede - Verifique sua conexão com a internet.');
+          window.location.href = '/error';
+          break;
     }
     console.error('Erro na resposta:', error);
     return Promise.reject(error);
   }
-);
+});
 
 export default api;
 
