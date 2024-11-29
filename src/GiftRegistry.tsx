@@ -482,7 +482,9 @@ export default function GiftRegistry() {
                         R$ {item.value}
                       </p>
                     </div>
-                    <p className="text-sm mb-2 text-center">{item.desc}</p>
+                    <p className="text-sm mb-2 text-center font-mono">
+                      {item.desc}
+                    </p>
                     <Button
                       onClick={() => openGiftModal(item)}
                       className="w-full"
@@ -570,7 +572,7 @@ export default function GiftRegistry() {
                         } else {
                           toast({
                             title: "Página criada com sucesso!",
-                            description: `O link será ${baseDomain}/${newPageName}.`,
+                            description: `O link será ${baseDomain}/${newPageName}`,
                           });
                         }
                       });
@@ -724,6 +726,19 @@ export default function GiftRegistry() {
             </div>
             <div>
               <Label className="text-black" htmlFor="giftImage">
+                Descrição
+              </Label>
+              <Textarea
+                id="giftImage"
+                value={newItem?.desc}
+                onChange={(e) =>
+                  setNewItem({ ...newItem, desc: e.target.value })
+                }
+                placeholder="Descrição do Item (Opcional)"
+              />
+            </div>
+            <div>
+              <Label className="text-black" htmlFor="giftImage">
                 Link da Imagem
               </Label>
               <Input
@@ -802,7 +817,7 @@ export default function GiftRegistry() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pix">Pix</SelectItem>
-                  <SelectItem value="purchase_link">Link de Compra</SelectItem>
+                  <SelectItem value="purchase-link">Link de Compra</SelectItem>
                   <SelectItem value="other">Outro</SelectItem>
                 </SelectContent>
               </Select>
@@ -820,7 +835,7 @@ export default function GiftRegistry() {
                 placeholder={
                   paymentForm === "pix"
                     ? "Código Pix"
-                    : paymentForm === "purchase_link"
+                    : paymentForm === "purchase-link"
                     ? "Link de Compra do Produto"
                     : "Insira Informação de Pagamento"
                 }
