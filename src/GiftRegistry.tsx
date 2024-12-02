@@ -172,7 +172,7 @@ export default function GiftRegistry({
     };
 
     const loadedSessionToken = Cookies.get("sessionToken");
-    console.log(loadedSessionToken);
+
     if (loadedSessionToken) {
       fetchUser();
       fetchUserPage();
@@ -183,20 +183,46 @@ export default function GiftRegistry({
     const fetchItems = async () => {
       try {
         const response = await api.get(`/pages/${CurrentUserPage?.id}/items`);
-        const pageItems = response.data;
-        if (pageItems.length > 0) {
-          pageItems.forEach(async (item: ItemObject) => {
-            const responseItem = await api.get(`items/${item.id}`);
-            setItems([]);
-            setItems((items) => [...items, responseItem.data]);
-          });
+        const pageItemsList = response.data;
+
+        if (pageItemsList.length > 0) {
+          const fetchedItems: ItemObject[] = []; // Array temporário para armazenar itens
+
+          for (const pageItem of pageItemsList) {
+            const responseItem = await api.get(`/items/${pageItem.item_id}`);
+            const itemData = responseItem.data;
+
+            // Verifica se o item já existe no array
+            if (!fetchedItems.find((item) => item.id === itemData.id)) {
+              fetchedItems.push(itemData);
+            }
+          }
+
+          // Atualiza o estado com os itens únicos
+          setItems(fetchedItems);
         }
       } catch (err) {
         console.log(err);
       }
     };
+
+    const fetchPageDetails = async () => {
+      try {
+        const response = await api.get(`/pages/${CurrentUserPage?.id}`);
+        console.log(response.data);
+        if (response.data) {
+          setTitle(response.data.title);
+          setDescription(response.data.description);
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
     if (CurrentUserPage) {
-      fetchItems();
+      setItems([]); // Limpa todos os itens
+      fetchPageDetails(); // Busca Título e Descrição
+      fetchItems(); // Busca todos os itens
     }
     if (publicAccess) {
       setStage("preview");
@@ -216,6 +242,7 @@ export default function GiftRegistry({
         console.log(err);
       }
     };
+
     if (!CurrentUserPage && CurrentUser) {
       fetchUserPage();
       setIsDomainDialogOpen(true);
@@ -472,7 +499,7 @@ export default function GiftRegistry({
   }
 
   return (
-    <div className="w-screen h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8 ">
+    <div className="flex flex-col w-screen h-full bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8">
       {publicAccess ? null : (
         <nav
           className={
@@ -797,7 +824,8 @@ export default function GiftRegistry({
                     Copiar
                   </Button>
                 </div>
-                <div className="flex gap-2 justify-center">
+                {/* TODO: Feature de envio de E-mail ao criar presente */}
+                {/* <div className="flex gap-2 justify-center">
                   <Switch
                     onCheckedChange={() =>
                       setSendMessage(sendMessage === false ? true : false)
@@ -806,7 +834,7 @@ export default function GiftRegistry({
                     id="sendMessage"
                   />
                   <p className="text-gray-800">Desejo enviar uma mensagem</p>
-                </div>
+                </div> */}
                 {sendMessage && (
                   <div className="justify-center gap-4 flex flex-col">
                     <div className="flex gap-4 w-full">
