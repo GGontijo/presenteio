@@ -115,6 +115,7 @@ export default function GiftRegistry({
   const baseDomain = import.meta.env.VITE_BASE_URL;
   const { toast } = useToast();
   const [newItem, setNewItem] = useState<ItemObject | null>(null);
+  const [itemUseImageLink, setItemUseImageLink] = useState(false);
 
   const userLogout = () => {
     setCurrentUser(null);
@@ -431,6 +432,39 @@ export default function GiftRegistry({
     }
   };
 
+  const handleItemImageUpload = async (image: File) => {
+    // Cria um FormData para enviar o arquivo
+    const formData = new FormData();
+    formData.append("file", image);
+
+    try {
+      const response = await api.post("/uploads", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (response.status === 200) {
+        toast({
+          title: "Upload feito com sucesso!",
+          description: response.data.file_url,
+        });
+        return response.data.file_url; // Retorna a URL do arquivo
+      } else {
+        toast({
+          title: "Houve um erro ao tentar realizar upload.",
+          description:
+            "Houve um erro ao tentar realizar upload. Tente mais tarde.",
+        });
+      }
+    } catch (err) {
+      console.error("Erro no upload:", err);
+      toast({
+        title: "Erro no Upload",
+        description: "Não foi possível enviar o arquivo.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handlePageNameFormat = (e: React.ChangeEvent<HTMLInputElement>) => {
     let sanitizedValue = e.target.value
       .replace(/[^a-z0-9-]/g, "")
@@ -499,7 +533,7 @@ export default function GiftRegistry({
   }
 
   return (
-    <div className="flex flex-col w-screen h-full bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8">
+    <div className="flex flex-col w-screen h-full min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8">
       {publicAccess ? null : (
         <nav
           className={
@@ -768,7 +802,7 @@ export default function GiftRegistry({
           </div>
         )
       ) : (
-        <div>
+        <div className="">
           <h1 className="text-center text-xl text-gray-600">
             Faça login para criar a sua página
           </h1>
@@ -930,19 +964,65 @@ export default function GiftRegistry({
                 placeholder="Descrição do Item (Opcional)"
               />
             </div>
-            <div>
-              <Label className="text-black" htmlFor="giftImage">
-                Link da Imagem
-              </Label>
-              <Input
-                id="giftImage"
-                value={newItem?.image_url}
-                onChange={(e) =>
-                  setNewItem({ ...newItem, image_url: e.target.value })
-                }
-                placeholder="https://exemplo.com/imagem.jpg"
-                required
-              />
+            <div className="space-y-2">
+              {/* Switch para alternar entre link público e upload */}
+              <div className="flex gap-2">
+                <Label className="text-black flex items-center mb-2">
+                  Upload do Arquivo
+                </Label>
+                <Switch
+                  className="ml-2"
+                  checked={itemUseImageLink}
+                  onCheckedChange={(value) => setItemUseImageLink(value)}
+                />
+                <Label className="text-black flex items-center mb-2">
+                  Link da Internet
+                </Label>
+              </div>
+
+              {itemUseImageLink ? (
+                // Campo para link público
+                <div>
+                  <Label className="text-black" htmlFor="giftImage">
+                    Link da Imagem
+                  </Label>
+                  <Input
+                    id="giftImage"
+                    value={newItem?.image_url}
+                    onChange={(e) =>
+                      setNewItem({ ...newItem, image_url: e.target.value })
+                    }
+                    placeholder="https://exemplo.com/imagem.jpg"
+                    required
+                  />
+                </div>
+              ) : (
+                // Campo para upload de imagem
+                <div>
+                  <Label className="text-black" htmlFor="uploadImage">
+                    Upload da Imagem
+                  </Label>
+                  <Input
+                    id="uploadImage"
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const fileUploadedUrl = await handleItemImageUpload(
+                          e.target.files[0]
+                        );
+                        if (fileUploadedUrl) {
+                          setNewItem({
+                            ...newItem,
+                            image_url: fileUploadedUrl,
+                          });
+                        }
+                      }
+                    }}
+                    required
+                  />
+                </div>
+              )}
             </div>
             <div>
               <Label className="text-black" htmlFor="giftValue">
