@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ShareModalButton } from "@/components/shareModal";
-import { Gift as GiftObject } from "@phosphor-icons/react";
+import { Gift } from "@phosphor-icons/react";
 import { useEffect } from "react";
 import { LoginModalButton } from "./components/loginModal";
 import { jwtDecode } from "jwt-decode";
@@ -42,6 +42,7 @@ import { ToastAction } from "./components/ui/toast";
 
 interface PageObject {
   id?: number;
+  user_id?: number;
   domain?: string;
   title?: string;
   description?: string;
@@ -59,10 +60,10 @@ interface ItemObject {
 }
 
 interface GiftObject {
-  id: number; // TODO: Obter id do retorno da API
-  sender_name: string;
-  sender_phone: string;
-  message: string;
+  id?: number; // TODO: Obter id do retorno da API
+  sender_name?: string;
+  sender_phone?: string;
+  message?: string;
   user_id: number;
   total: number;
 }
@@ -92,7 +93,7 @@ export default function GiftRegistry({
   page = null,
   isPublic = false,
 }: GiftRegistryProps) {
-  // bulding, preview
+  // bulding, preview, published
   const [stage, setStage] = useState("building");
   const [items, setItems] = useState<ItemObject[]>([]);
   const [title, setTitle] = useState("");
@@ -102,7 +103,6 @@ export default function GiftRegistry({
   const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ItemObject | null>(null);
   const [isDomainDialogOpen, setIsDomainDialogOpen] = useState(false);
-  const [selectedGift, setSelectedGift] = useState<ItemObject | null>(null);
   const [CurrentUser, setCurrentUser] = useState<UserObject | null>(null);
   const [CurrentUserPage, setCurrentUserPage] = useState<PageObject | null>(
     page
@@ -115,6 +115,7 @@ export default function GiftRegistry({
   const baseDomain = import.meta.env.VITE_BASE_URL;
   const { toast } = useToast();
   const [newItem, setNewItem] = useState<ItemObject | null>(null);
+  const [newGift, setNewGift] = useState<GiftObject | null>(null);
   const [itemUseImageLink, setItemUseImageLink] = useState(false);
 
   const userLogout = () => {
@@ -135,6 +136,10 @@ export default function GiftRegistry({
 
   const resetNewItem = () => {
     setNewItem(null);
+  };
+
+  const resetNewGift = () => {
+    setNewGift(null);
   };
 
   useEffect(() => {
@@ -210,7 +215,6 @@ export default function GiftRegistry({
     const fetchPageDetails = async () => {
       try {
         const response = await api.get(`/pages/${CurrentUserPage?.id}`);
-        console.log(response.data);
         if (response.data) {
           setTitle(response.data.title);
           setDescription(response.data.description);
@@ -226,7 +230,7 @@ export default function GiftRegistry({
       fetchItems(); // Busca todos os itens
     }
     if (publicAccess) {
-      setStage("preview");
+      setStage("published");
     }
   }, [CurrentUserPage, publicAccess]);
 
@@ -368,15 +372,15 @@ export default function GiftRegistry({
     }
   };
 
-  const openGiftModal = (gift: ItemObject) => {
+  const openGiftModal = (item: ItemObject) => {
     setSendMessage(false);
-    setSelectedGift(gift);
+    setSelectedItem(item);
     setIsGiftModalOpen(true);
   };
 
   const closeGiftModal = () => {
     setIsGiftModalOpen(false);
-    setSelectedGift(null);
+    setSelectedItem(null);
   };
 
   const openEditModal = (item: ItemObject) => {
@@ -387,6 +391,45 @@ export default function GiftRegistry({
   const closeEditModal = () => {
     setIsEditItemModalOpen(false);
     setSelectedItem(null);
+  };
+
+  const handleSendGift = async (
+    item: ItemObject,
+    gift: GiftObject | null,
+    user_id: number | null
+  ) => {
+    console.log(item, gift, user_id);
+    if (!gift || !user_id) {
+      return;
+    }
+
+    const response = await api.post("/gifts", {
+      user_id: user_id,
+      sender_name: gift?.sender_name,
+      sender_phone: gift?.sender_phone,
+      message: gift?.message,
+    });
+
+    if (response.status === 200) {
+      const createdGift = await response.data;
+      const responseGiftItem = await api.post(
+        `/gifts/${createdGift.id}/items/${item.id}`
+      );
+
+      if (responseGiftItem.status === 200) {
+        toast({
+          title: "Presente enviado com sucesso!",
+        });
+        resetNewGift();
+        closeGiftModal();
+      }
+    }
+
+    toast({
+      title: "Houve um erro ao tentar criar o presente!",
+      description: "Erro ao tentar criar o presente. Tente mais tarde.",
+    });
+    resetNewGift();
   };
 
   const handleTitleChange = async (title: string) => {
@@ -510,7 +553,10 @@ export default function GiftRegistry({
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert(`"Valor copiado: ${text}!"`);
+    toast({
+      title: "Valor copiado:",
+      description: text,
+    });
   };
 
   async function removeItem(id: number): Promise<void> {
@@ -565,7 +611,7 @@ export default function GiftRegistry({
               }
               {stage === "building" ? (
                 <nav className="flex items-center gap-2 text-xl font-mono text-gray-500 hover:text-black">
-                  <GiftObject size={24} weight="thin" />
+                  <Gift size={24} weight="thin" />
                   Presenteio
                 </nav>
               ) : null}
@@ -705,7 +751,7 @@ export default function GiftRegistry({
                       onClick={() => openGiftModal(item)}
                       className="w-full mt-auto"
                     >
-                      Presentear
+                      Quero Presentear
                     </Button>
                   </CardContent>
                 </Card>
@@ -816,28 +862,28 @@ export default function GiftRegistry({
         >
           <DialogHeader>
             <DialogTitle className="text-center">
-              {selectedGift?.name}
+              {selectedItem?.name}
             </DialogTitle>
           </DialogHeader>
-          {selectedGift && (
+          {selectedItem && (
             <div className="text-center">
               <div className="flex justify-center">
                 <img
-                  src={selectedGift.image_url}
-                  alt={selectedGift.image_url}
-                  className="relative max-w-[90%] sm:max-w-[200px] max-h-[500px] center mb-5 rounded-lg shadow-2xl"
+                  src={selectedItem.image_url}
+                  alt={selectedItem.image_url}
+                  className="relative max-w-[90%] sm:max-w-[300px] max-h-[500px] center mb-5 rounded-lg shadow-2xl"
                 />
               </div>
-              <p className="mb-4">{selectedGift.desc}</p>
+              <p className="mb-4">{selectedItem.desc}</p>
               <p className="mb-2 text-3xl font-mono font-bold">
-                {"R$ " + selectedGift?.value}
+                {"R$ " + selectedItem?.value}
               </p>
-              <div className="space-y-5">
+              <div className="space-y-5 flex flex-col">
                 <p className="text-gray-800">
                   Forma de Pagamento:{" "}
-                  {selectedGift.payment_form === "pix"
+                  {selectedItem.payment_form === "pix"
                     ? "Pix"
-                    : selectedGift.payment_form === "purchase_link"
+                    : selectedItem.payment_form === "purchase_link"
                     ? "Link de Compra"
                     : "Outro"}
                 </p>
@@ -845,21 +891,21 @@ export default function GiftRegistry({
                   <input
                     className="text-md font-semibold text-gray-700 border-black border px-4"
                     id="payment_info"
-                    value={selectedGift.payment_info}
+                    value={selectedItem.payment_info}
                     readOnly
                     autoFocus={true}
                   />
                   <Button
                     className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
                     onClick={() =>
-                      copyToClipboard(selectedGift.payment_info as string)
+                      copyToClipboard(selectedItem.payment_info as string)
                     }
                   >
                     Copiar
                   </Button>
                 </div>
                 {/* TODO: Feature de envio de E-mail ao criar presente */}
-                {/* <div className="flex gap-2 justify-center">
+                <div className="flex gap-2 justify-center">
                   <Switch
                     onCheckedChange={() =>
                       setSendMessage(sendMessage === false ? true : false)
@@ -868,7 +914,7 @@ export default function GiftRegistry({
                     id="sendMessage"
                   />
                   <p className="text-gray-800">Desejo enviar uma mensagem</p>
-                </div> */}
+                </div>
                 {sendMessage && (
                   <div className="justify-center gap-4 flex flex-col">
                     <div className="flex gap-4 w-full">
@@ -883,6 +929,7 @@ export default function GiftRegistry({
                           className="text-black"
                           id="sender_name"
                           placeholder="João da Silva"
+                          value={newGift?.sender_name}
                         />
                       </div>
                       <div className="flex-1 flex flex-col">
@@ -895,7 +942,8 @@ export default function GiftRegistry({
                         <Input
                           className="text-black"
                           id="sender_phone"
-                          placeholder="(99) 9999-9999"
+                          placeholder="(99) 9 9999-9999"
+                          value={newGift?.sender_phone}
                         />
                       </div>
                     </div>
@@ -912,17 +960,25 @@ export default function GiftRegistry({
                         placeholder="Escreva sua mensagem..."
                         rows={3}
                         maxLength={250}
+                        value={newGift?.message}
                       />
                     </div>
-                    <Button
-                      className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
-                      onClick={() => closeGiftModal()}
-                      disabled={stage === "building" ? true : false}
-                    >
-                      Enviar Mensagem
-                    </Button>
                   </div>
                 )}
+                {/* TODO: Fix send gift adding a <form> to this dialog */}
+                <Button
+                  className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
+                  onClick={() =>
+                    handleSendGift(
+                      selectedItem,
+                      newGift,
+                      CurrentUserPage?.user_id as number
+                    )
+                  }
+                  disabled={stage === "published" ? false : true}
+                >
+                  Confirmar Escolha
+                </Button>
               </div>
             </div>
           )}
