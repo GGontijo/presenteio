@@ -8,7 +8,7 @@ const ErrorPage = () => {
     }, 10000);
   };
 
-  retryAfter();
+  // retryAfter();
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100 text-center font-mono">
@@ -18,7 +18,7 @@ const ErrorPage = () => {
       <h2 className="text-2xl font-bold text-gray-500 mb-6 font-mono">
         Por favor, tente novamente mais tarde
       </h2>
-      <img  
+      <img
         src="https://media.giphy.com/media/A9EcBzd6t8DZe/giphy.gif"
         alt="Erro GIF"
         className="w-80 h-80"

@@ -83,27 +83,37 @@ interface JwtObject {
   picture: string;
 }
 
-export default function GiftRegistry() {
+interface GiftRegistryProps {
+  page: PageObject | null;
+  isPublic?: boolean;
+}
+
+export default function GiftRegistry({
+  page = null,
+  isPublic = false,
+}: GiftRegistryProps) {
   // bulding, preview
   const [stage, setStage] = useState("building");
   const [items, setItems] = useState<ItemObject[]>([]);
   const [title, setTitle] = useState("");
-  const [message, setMessage] = useState("");
+  const [description, setDescription] = useState("");
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<ItemObject | null>(null);
   const [isDomainDialogOpen, setIsDomainDialogOpen] = useState(false);
   const [selectedGift, setSelectedGift] = useState<ItemObject | null>(null);
   const [CurrentUser, setCurrentUser] = useState<UserObject | null>(null);
   const [CurrentUserPage, setCurrentUserPage] = useState<PageObject | null>(
-    null
+    page
   );
+  const [publicAccess] = useState(isPublic);
   const [paymentForm, setPaymentForm] = useState("");
   const [sendMessage, setSendMessage] = useState(false);
   const [userLogged, setUserLogged] = useState(false);
   const [newPageName, setNewPageName] = useState("");
   const baseDomain = import.meta.env.VITE_BASE_URL;
   const { toast } = useToast();
-
   const [newItem, setNewItem] = useState<ItemObject | null>(null);
 
   const userLogout = () => {
@@ -151,6 +161,8 @@ export default function GiftRegistry() {
         const response = await api.get("/pages");
         if (response.data && response.data.length > 0) {
           setCurrentUserPage(response.data[0]);
+          setTitle(response.data[0].title);
+          setDescription(response.data[0].description);
         } else {
           setCurrentUserPage(null);
         }
@@ -159,28 +171,56 @@ export default function GiftRegistry() {
       }
     };
 
-    const fetchItems = async () => {
-      try {
-        const response = await api.get("/items");
-        setItems(response.data);
-      } catch (err) {
-        console.log(err);
-      }
-    };
     const loadedSessionToken = Cookies.get("sessionToken");
     console.log(loadedSessionToken);
     if (loadedSessionToken) {
       fetchUser();
       fetchUserPage();
-      fetchItems();
     }
   }, []);
 
   useEffect(() => {
-    if (!CurrentUserPage) {
+    const fetchItems = async () => {
+      try {
+        const response = await api.get(`/pages/${CurrentUserPage?.id}/items`);
+        const pageItems = response.data;
+        if (pageItems.length > 0) {
+          pageItems.forEach(async (item: ItemObject) => {
+            const responseItem = await api.get(`items/${item.id}`);
+            setItems([]);
+            setItems((items) => [...items, responseItem.data]);
+          });
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    if (CurrentUserPage) {
+      fetchItems();
+    }
+    if (publicAccess) {
+      setStage("preview");
+    }
+  }, [CurrentUserPage, publicAccess]);
+
+  useEffect(() => {
+    const fetchUserPage = async () => {
+      try {
+        const response = await api.get("/pages");
+        if (response.data && response.data.length > 0) {
+          setCurrentUserPage(response.data[0]);
+        } else {
+          setCurrentUserPage(null);
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    if (!CurrentUserPage && CurrentUser) {
+      fetchUserPage();
       setIsDomainDialogOpen(true);
     }
-  }, [CurrentUserPage]);
+  }, [CurrentUserPage, CurrentUser]);
 
   const createBlankPage = async (domain: string) => {
     const newPage = {
@@ -199,6 +239,13 @@ export default function GiftRegistry() {
     setNewItem({ ...newItem, payment_form: value });
   };
 
+  const handleEditPaymentFormChange = (value: string) => {
+    setPaymentForm(value);
+    if (selectedItem) {
+      selectedItem.payment_form = value;
+    }
+  };
+
   const getInitials = (fullName: string | undefined) => {
     if (!fullName) return "NA";
 
@@ -214,6 +261,7 @@ export default function GiftRegistry() {
   };
 
   const addItem = async (e: React.FormEvent) => {
+    console.log("Adicionando item...");
     e.preventDefault();
     if (
       newItem?.name &&
@@ -248,6 +296,50 @@ export default function GiftRegistry() {
     }
   };
 
+  const editItem = async (e: React.FormEvent) => {
+    console.log("Editando item...");
+    e.preventDefault();
+    if (
+      selectedItem &&
+      selectedItem?.name &&
+      selectedItem?.image_url &&
+      selectedItem?.value &&
+      selectedItem?.payment_form
+    ) {
+      try {
+        const responseEditItem = await api.put(
+          `/items/${selectedItem.id}`,
+          selectedItem
+        );
+        console.log(responseEditItem);
+
+        const editedItem = await responseEditItem.data;
+
+        if (responseEditItem.status === 200) {
+          setItems(
+            items.map((gift) =>
+              gift.id === selectedItem.id ? editedItem : gift
+            )
+          );
+          console.log(responseEditItem);
+        } else {
+          toast({
+            title: "Houve um erro ao tentar adicionar o item.",
+            description: "Erro ao adicionar o item. Tente mais tarde.",
+          });
+        }
+
+        closeEditModal();
+      } catch (err) {
+        console.log(err);
+        toast({
+          title: "Houve um erro ao tentar adicionar o item.",
+          description: "Erro ao adicionar o item. Tente mais tarde.",
+        });
+      }
+    }
+  };
+
   const openGiftModal = (gift: ItemObject) => {
     setSendMessage(false);
     setSelectedGift(gift);
@@ -257,6 +349,59 @@ export default function GiftRegistry() {
   const closeGiftModal = () => {
     setIsGiftModalOpen(false);
     setSelectedGift(null);
+  };
+
+  const openEditModal = (item: ItemObject) => {
+    setSelectedItem(item);
+    setIsEditItemModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditItemModalOpen(false);
+    setSelectedItem(null);
+  };
+
+  const handleTitleChange = async (title: string) => {
+    if (title.trim().length > 0 && title !== CurrentUserPage?.title) {
+      const response = await api.patch(`/pages/${CurrentUserPage?.id}`, {
+        title: title,
+      });
+
+      if (response.status === 200) {
+        setCurrentUserPage({ ...CurrentUserPage, title: title });
+        setTitle(title);
+        toast({
+          title: "Título da página editado com sucesso!",
+        });
+      } else {
+        toast({
+          title: "Houve um erro ao tentar editar o título da página.",
+          description: "Erro ao editar o título da página. Tente mais tarde.",
+        });
+      }
+    }
+  };
+
+  const handleDescChange = async (desc: string) => {
+    if (desc.trim().length > 0 && desc !== CurrentUserPage?.description) {
+      const response = await api.patch(`/pages/${CurrentUserPage?.id}`, {
+        description: desc,
+      });
+
+      if (response.status === 200) {
+        setCurrentUserPage({ ...CurrentUserPage, description: desc });
+        setDescription(desc);
+        toast({
+          title: "Descrição da página editado com sucesso!",
+        });
+      } else {
+        toast({
+          title: "Houve um erro ao tentar editar a descrição da página.",
+          description:
+            "Erro ao editar editar a descrição da página. Tente mais tarde.",
+        });
+      }
+    }
   };
 
   const handlePageNameFormat = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -315,7 +460,7 @@ export default function GiftRegistry() {
       console.log(response.data);
       toast({
         title: "Houve um erro ao tentar remover o item.",
-        description: "Erro ao remover o item. Tente mais tarde.",
+        description: response.data,
         action: (
           <ToastAction
             altText="Tentar novamente"
@@ -328,84 +473,89 @@ export default function GiftRegistry() {
 
   return (
     <div className="w-screen h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8 ">
-      <nav
-        className={
-          stage === "building"
-            ? "fixed inset-x-0 top-0 z-50 bg-white shadow-lg dark:bg-gray-950/90"
-            : "fixed inset-x-0 top-0 z-50 bg-transparent"
-        }
-      >
-        <div className="w-full max-w-8xl mx-auto px-4">
-          <div className="flex justify-between h-14">
-            {
-              <div
-                className={`flex items-center space-x-2 justify-start ${
-                  CurrentUserPage != null && userLogged
-                    ? ""
-                    : "text-transparent"
-                }`}
-              >
-                <Switch
-                  className={userLogged && CurrentUserPage ? "" : "hidden"}
-                  onCheckedChange={() =>
-                    setStage(stage === "building" ? "preview" : "building")
-                  }
-                  disabled={!CurrentUserPage || !userLogged}
-                  id="preview"
-                />
-                <Label htmlFor="previewMode">Ver como público</Label>
-              </div>
-            }
-            {stage === "building" ? (
-              <nav className="flex items-center gap-2 text-xl font-mono text-gray-400 hover:text-black">
-                <GiftObject size={24} weight="thin" />
-                Presenteio
-              </nav>
-            ) : null}
-            {stage === "building" ? (
-              <div className="flex items-center gap-4">
-                {userLogged && (
-                  <ShareModalButton enabled={CurrentUserPage != null} />
-                )}
-                {userLogged == false ? (
-                  <LoginModalButton
-                    onLoginSuccess={(loginResponse: CredentialResponse) =>
-                      handleGoogleLoginResponse(loginResponse)
+      {publicAccess ? null : (
+        <nav
+          className={
+            stage === "building"
+              ? "fixed inset-x-0 top-0 z-50 bg-white shadow-lg dark:bg-gray-950/90 "
+              : "fixed inset-x-0 top-0 z-50 bg-transparent"
+          }
+        >
+          <div className="w-full max-w-8xl mx-auto px-4">
+            <div className="flex justify-between h-14">
+              {
+                <div
+                  className={`flex items-center space-x-2 justify-start ${
+                    CurrentUserPage != null && userLogged
+                      ? ""
+                      : "text-transparent"
+                  }`}
+                >
+                  <Switch
+                    className={userLogged && CurrentUserPage ? "" : "hidden"}
+                    onCheckedChange={() =>
+                      setStage(stage === "building" ? "preview" : "building")
                     }
-                    onLoginFailure={() => handleGoogleLoginResponse()}
+                    disabled={!CurrentUserPage || !userLogged}
+                    id="preview"
                   />
-                ) : (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Avatar className="cursor-pointer">
-                        <AvatarImage src={CurrentUser?.picture_url} />
-                        <AvatarFallback>
-                          {getInitials(CurrentUser?.name)}
-                        </AvatarFallback>
-                        <span className="sr-only">Toggle user menu</span>
-                      </Avatar>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem className="cursor-pointer">
+                  <Label htmlFor="previewMode">Ver como público</Label>
+                </div>
+              }
+              {stage === "building" ? (
+                <nav className="flex items-center gap-2 text-xl font-mono text-gray-500 hover:text-black">
+                  <GiftObject size={24} weight="thin" />
+                  Presenteio
+                </nav>
+              ) : null}
+              {stage === "building" ? (
+                <div className="flex items-center gap-4">
+                  {userLogged && (
+                    <ShareModalButton
+                      enabled={CurrentUserPage != null}
+                      domain={CurrentUserPage?.domain}
+                    />
+                  )}
+                  {userLogged == false ? (
+                    <LoginModalButton
+                      onLoginSuccess={(loginResponse: CredentialResponse) =>
+                        handleGoogleLoginResponse(loginResponse)
+                      }
+                      onLoginFailure={() => handleGoogleLoginResponse()}
+                    />
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Avatar className="cursor-pointer">
+                          <AvatarImage src={CurrentUser?.picture_url} />
+                          <AvatarFallback>
+                            {getInitials(CurrentUser?.name)}
+                          </AvatarFallback>
+                          <span className="sr-only">Toggle user menu</span>
+                        </Avatar>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {/* <DropdownMenuItem className="cursor-pointer">
                         Configurações
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => userLogout()}
-                      >
-                        Sair
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            ) : null}
+                      </DropdownMenuItem> */}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => userLogout()}
+                        >
+                          Sair
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
+      )}
       <div className="my-2 h-6"></div>
-      {userLogged ? (
+      {userLogged || publicAccess ? (
         CurrentUserPage ? (
           <div>
             <header className="text-center mb-12 space-y-4 ">
@@ -415,6 +565,7 @@ export default function GiftRegistry() {
                   value={title}
                   maxLength={50}
                   placeholder="Clique para adicionar um título"
+                  onBlur={(e) => handleTitleChange(e.target.value)}
                   onChange={(e) => setTitle(e.target.value)}
                   className="text-4xl font-bold text-slate-800 mb-4 bg-transparent border-black border text-center w-full"
                 />
@@ -424,24 +575,23 @@ export default function GiftRegistry() {
                   disabled
                   value={title}
                   maxLength={50}
-                  onChange={(e) => setTitle(e.target.value)}
                   className="text-4xl font-bold text-slate-800 mb-4 bg-transparent text-center w-full"
                 />
               )}
               {stage === "building" ? (
                 <textarea
-                  value={message}
+                  value={description}
                   placeholder="Clique para adicionar uma descrição"
-                  onChange={(e) => setMessage(e.target.value)}
+                  onBlur={(e) => handleDescChange(e.target.value)}
+                  onChange={(e) => setDescription(e.target.value)}
                   maxLength={250}
                   className="text-gray-800 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none"
                   rows={3}
                 />
               ) : (
                 <textarea
-                  value={message}
+                  value={description}
                   disabled
-                  onChange={(e) => setMessage(e.target.value)}
                   maxLength={250}
                   className="text-gray-600 max-w-2xl mx-auto bg-transparent text-center w-full resize-none"
                   rows={3}
@@ -453,11 +603,14 @@ export default function GiftRegistry() {
               {items.map((item) => (
                 <Card
                   key={item.id}
-                  className="overflow-hidden transition-shadow hover:shadow-lg"
+                  className="overflow-hidden transition-shadow hover:shadow-lg flex flex-col"
                 >
                   {stage === "building" && (
                     <div className="flex">
-                      <Button className="w-full bg-blue-400 h-8 hover:bg-blue-500">
+                      <Button
+                        className="w-full bg-gray-400 h-8 hover:bg-blue-500"
+                        onClick={() => openEditModal(item)}
+                      >
                         Editar Item
                       </Button>
                       <Button
@@ -473,12 +626,14 @@ export default function GiftRegistry() {
                     alt={item.image_url}
                     className="w-full h-60 object-scale-down"
                   />
-                  <CardContent className="p-4">
-                    <div className="flex justify-between">
-                      <p className="text-xl mb-2 text-center font-serif">
+                  <CardContent className="p-4 flex flex-col flex-grow">
+                    <div className="flex justify-center">
+                      <p className="text-lg mb-2 text-center font-serif">
                         {item.name}
                       </p>
-                      <p className="mb-2 text-xl font-mono text-center text-gray-700">
+                    </div>
+                    <div>
+                      <p className="mb-2 text-lg font-mono text-center text-gray-700">
                         R$ {item.value}
                       </p>
                     </div>
@@ -487,7 +642,7 @@ export default function GiftRegistry() {
                     </p>
                     <Button
                       onClick={() => openGiftModal(item)}
-                      className="w-full"
+                      className="w-full mt-auto"
                     >
                       Presentear
                     </Button>
@@ -514,7 +669,7 @@ export default function GiftRegistry() {
             </h1>
             <Button
               onClick={() => setIsDomainDialogOpen(true)}
-              className="w-full items-center justify-center hover:bg-black hover:text-white"
+              className="items-center justify-center hover:bg-black hover:text-white text-lg"
               variant={"outline"}
             >
               Criar uma página
@@ -587,14 +742,17 @@ export default function GiftRegistry() {
         )
       ) : (
         <div>
-          <h1 className="text-center text-xl text-gray-500">
+          <h1 className="text-center text-xl text-gray-600">
             Faça login para criar a sua página
           </h1>
         </div>
       )}
 
       <Dialog open={isGiftModalOpen} onOpenChange={setIsGiftModalOpen}>
-        <DialogContent>
+        <DialogContent
+          className="max-h-screen overflow-y-auto"
+          aria-describedby="addgift-description"
+        >
           <DialogHeader>
             <DialogTitle className="text-center">
               {selectedGift?.name}
@@ -602,18 +760,25 @@ export default function GiftRegistry() {
           </DialogHeader>
           {selectedGift && (
             <div className="text-center">
-              <img
-                src={selectedGift.image_url}
-                alt={selectedGift.image_url}
-                className="w-full mb-5 rounded-lg shadow-2xl"
-              />
+              <div className="flex justify-center">
+                <img
+                  src={selectedGift.image_url}
+                  alt={selectedGift.image_url}
+                  className="relative max-w-[90%] sm:max-w-[200px] max-h-[500px] center mb-5 rounded-lg shadow-2xl"
+                />
+              </div>
               <p className="mb-4">{selectedGift.desc}</p>
               <p className="mb-2 text-3xl font-mono font-bold">
-                {"R$" + selectedGift?.value?.toFixed(2)}
+                {"R$ " + selectedGift?.value}
               </p>
               <div className="space-y-5">
                 <p className="text-gray-800">
-                  Forma de Pagamento: {selectedGift.payment_form}
+                  Forma de Pagamento:{" "}
+                  {selectedGift.payment_form === "pix"
+                    ? "Pix"
+                    : selectedGift.payment_form === "purchase_link"
+                    ? "Link de Compra"
+                    : "Outro"}
                 </p>
                 <div className="justify-center flex gap-2">
                   <input
@@ -688,7 +853,7 @@ export default function GiftRegistry() {
                       />
                     </div>
                     <Button
-                      className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white ml-4"
+                      className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
                       onClick={() => closeGiftModal()}
                       disabled={stage === "building" ? true : false}
                     >
@@ -703,13 +868,13 @@ export default function GiftRegistry() {
       </Dialog>
 
       <Dialog open={isAddItemModalOpen} onOpenChange={setIsAddItemModalOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby="additem-description">
           <DialogHeader>
             <DialogTitle className="text-black">
               Adicionar Novo Item
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={addItem} className="space-y-4">
+          <form onSubmit={addItem} className="space-y-4" id="additem-form">
             <div>
               <Label className="text-black" htmlFor="itemName">
                 Nome do Item
@@ -751,24 +916,6 @@ export default function GiftRegistry() {
                 required
               />
             </div>
-            {/* <div className="grid w-full max-w-sm items-center gap-1.5">
-              <Label htmlFor="picture">Imagem do Item</Label>
-              <Input id="giftImage" type="file" />
-            </div>
-            <div>
-              <Label className="text-black" htmlFor="giftDescription">
-                Descrição do Item
-              </Label>
-              <Textarea
-                className="resize-none"
-                id="giftDescription"
-                value={newGift.desc}
-                onChange={(e) =>
-                  setNewGift({ ...newGift, desc: e.target.value })
-                }
-                placeholder="Descrição do item"
-              />
-            </div> */}
             <div>
               <Label className="text-black" htmlFor="giftValue">
                 Valor do Item
@@ -843,6 +990,114 @@ export default function GiftRegistry() {
             </div>
             <Button type="submit" className="w-full" onSubmit={addItem}>
               Adicionar Item na Página
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Modal */}
+      <Dialog open={isEditItemModalOpen} onOpenChange={setIsEditItemModalOpen}>
+        <DialogContent aria-describedby="edititem-description">
+          <DialogHeader>
+            <DialogTitle className="text-black">Editar Item</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={editItem} className="space-y-4" id="edititem-form">
+            <div>
+              <Label className="text-black" htmlFor="itemName">
+                Nome do Item
+              </Label>
+              <Input id="itemName" value={selectedItem?.name} required />
+            </div>
+            <div>
+              <Label className="text-black" htmlFor="giftImage">
+                Descrição
+              </Label>
+              <Textarea id="giftImage" value={selectedItem?.desc} />
+            </div>
+            <div>
+              <Label className="text-black" htmlFor="giftImage">
+                Link da Imagem
+              </Label>
+              <Input id="giftImage" value={selectedItem?.image_url} required />
+            </div>
+            <div>
+              <Label className="text-black" htmlFor="giftValue">
+                Valor do Item
+              </Label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <span className="text-muted-foreground">R$</span>
+                </div>
+                <Input
+                  id="giftValue"
+                  type="text"
+                  value={
+                    selectedItem?.value
+                      ? new Intl.NumberFormat("pt-BR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }).format(selectedItem?.value)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    let value = e.target.value;
+
+                    // Remove caracteres não numéricos, mantendo a vírgula
+                    value = value.replace(/\D/g, "");
+
+                    // Divide por 100 para obter o valor correto
+                    const floatValue = Number(value) / 100;
+
+                    // Atualiza o estado usando setSelectedItem
+                    setSelectedItem((prevItem) => ({
+                      ...prevItem,
+                      value: floatValue,
+                    }));
+                  }}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                  className="flex items-center pl-9 text-xl"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-black" htmlFor="itemPaymentForm">
+                Forma de Pagamento
+              </Label>
+              <Select
+                value={selectedItem?.payment_form}
+                onValueChange={handleEditPaymentFormChange}
+                required
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Selecionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pix">Pix</SelectItem>
+                  <SelectItem value="purchase-link">Link de Compra</SelectItem>
+                  <SelectItem value="other">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-black" htmlFor="itemName">
+                Informação de Pagamento
+              </Label>
+              <Input
+                id="itemPaymentInfo"
+                value={selectedItem?.payment_info}
+                placeholder={
+                  paymentForm === "pix"
+                    ? "Código Pix"
+                    : paymentForm === "purchase-link"
+                    ? "Link de Compra do Produto"
+                    : "Insira Informação de Pagamento"
+                }
+              />
+            </div>
+            <Button type="submit" className="w-full" onSubmit={editItem}>
+              Editar Item
             </Button>
           </form>
         </DialogContent>

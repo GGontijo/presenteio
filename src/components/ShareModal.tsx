@@ -14,7 +14,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function ShareModalButton({ enabled }: { enabled: boolean }) {
+interface ShareModalButtonProps {
+  enabled: boolean;
+  domain?: string;
+}
+
+export function ShareModalButton({ enabled, domain }: ShareModalButtonProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -36,13 +41,17 @@ export function ShareModalButton({ enabled }: { enabled: boolean }) {
           </DialogDescription>
         </DialogHeader>
         <div className="flex items-center space-x-2">
-          <Input id="link" value={import.meta.env.VITE_BASE_URL} readOnly />
+          <Input
+            id="link"
+            value={`${import.meta.env.VITE_BASE_URL}/${domain}`}
+            readOnly
+          />
           <Button
             type="submit"
             size="sm"
             className="px-3"
             onClick={() =>
-              navigator.clipboard.writeText(import.meta.env.VITE_BASE_URL)
+              navigator.clipboard.writeText(`${import.meta.env.VITE_BASE_URL}/${domain}`)
             }
           >
             <span className="sr-only">Copiar</span>
@@ -52,7 +61,7 @@ export function ShareModalButton({ enabled }: { enabled: boolean }) {
         <DialogFooter className="sm:justify-start">
           <DialogClose asChild>
             <Button type="button" variant="secondary">
-              Fechar
+              Publicar
             </Button>
           </DialogClose>
         </DialogFooter>

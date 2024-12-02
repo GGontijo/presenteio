@@ -35,9 +35,10 @@ api.interceptors.response.use(
     return response;
   },
   error => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 || error.response?.status === 403) {
       // Remove o cookie de sessão
       Cookies.remove("sessionToken");
+      window.location.href = '/';
 
       // Opcional: Recarrega a página (para resetar o estado do componente)
       // window.location.reload();
