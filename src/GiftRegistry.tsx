@@ -64,8 +64,8 @@ interface GiftObject {
   sender_name?: string;
   sender_phone?: string;
   message?: string;
-  user_id: number;
-  total: number;
+  user_id?: number;
+  total?: number;
 }
 
 interface UserObject {
@@ -398,38 +398,44 @@ export default function GiftRegistry({
     gift: GiftObject | null,
     user_id: number | null
   ) => {
-    console.log(item, gift, user_id);
     if (!gift || !user_id) {
       return;
     }
 
-    const response = await api.post("/gifts", {
-      user_id: user_id,
-      sender_name: gift?.sender_name,
-      sender_phone: gift?.sender_phone,
-      message: gift?.message,
-    });
+    try {
+      console.log("Enviando presente...");
+      const response = await api.post("/gifts", {
+        user_id: user_id,
+        sender_name: gift.sender_name,
+        sender_phone: gift.sender_phone,
+        message: gift.message,
+      });
+      
+      console.log(response);
 
-    if (response.status === 200) {
-      const createdGift = await response.data;
-      const responseGiftItem = await api.post(
-        `/gifts/${createdGift.id}/items/${item.id}`
-      );
+      if (response.status === 200) {
+        const createdGift = await response.data;
+        const responseGiftItem = await api.post(
+          `/gifts/${createdGift.id}/items/${item.id}`
+        );
 
-      if (responseGiftItem.status === 200) {
-        toast({
-          title: "Presente enviado com sucesso!",
-        });
-        resetNewGift();
-        closeGiftModal();
+        if (responseGiftItem.status === 200) {
+          toast({
+            title: "Presente enviado com sucesso!",
+          });
+          resetNewGift();
+          closeGiftModal();
+        }
       }
-    }
 
-    toast({
-      title: "Houve um erro ao tentar criar o presente!",
-      description: "Erro ao tentar criar o presente. Tente mais tarde.",
-    });
-    resetNewGift();
+      console.log("f presente...");
+    } catch {
+      toast({
+        title: "Houve um erro ao tentar criar o presente!",
+        description: "Erro ao tentar criar o presente. Tente mais tarde.",
+      });
+      resetNewGift();
+    }
   };
 
   const handleTitleChange = async (title: string) => {
@@ -866,121 +872,147 @@ export default function GiftRegistry({
             </DialogTitle>
           </DialogHeader>
           {selectedItem && (
-            <div className="text-center">
-              <div className="flex justify-center">
-                <img
-                  src={selectedItem.image_url}
-                  alt={selectedItem.image_url}
-                  className="relative max-w-[90%] sm:max-w-[300px] max-h-[500px] center mb-5 rounded-lg shadow-2xl"
-                />
-              </div>
-              <p className="mb-4">{selectedItem.desc}</p>
-              <p className="mb-2 text-3xl font-mono font-bold">
-                {"R$ " + selectedItem?.value}
-              </p>
-              <div className="space-y-5 flex flex-col">
-                <p className="text-gray-800">
-                  Forma de Pagamento:{" "}
-                  {selectedItem.payment_form === "pix"
-                    ? "Pix"
-                    : selectedItem.payment_form === "purchase_link"
-                    ? "Link de Compra"
-                    : "Outro"}
+            <form
+              onSubmit={() =>
+                handleSendGift(
+                  selectedItem,
+                  newGift,
+                  CurrentUserPage?.user_id as number
+                )
+              }
+              className="space-y-4"
+              id="sendgift-form"
+            >
+              <div className="text-center">
+                <div className="flex justify-center">
+                  <img
+                    src={selectedItem.image_url}
+                    alt={selectedItem.image_url}
+                    className="relative max-w-[90%] sm:max-w-[300px] max-h-[500px] center mb-5 rounded-lg shadow-2xl"
+                  />
+                </div>
+                <p className="mb-4">{selectedItem.desc}</p>
+                <p className="mb-2 text-3xl font-mono font-bold">
+                  {"R$ " + selectedItem?.value}
                 </p>
-                <div className="justify-center flex gap-2">
-                  <input
-                    className="text-md font-semibold text-gray-700 border-black border px-4"
-                    id="payment_info"
-                    value={selectedItem.payment_info}
-                    readOnly
-                    autoFocus={true}
-                  />
-                  <Button
-                    className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
-                    onClick={() =>
-                      copyToClipboard(selectedItem.payment_info as string)
-                    }
-                  >
-                    Copiar
-                  </Button>
-                </div>
-                {/* TODO: Feature de envio de E-mail ao criar presente */}
-                <div className="flex gap-2 justify-center">
-                  <Switch
-                    onCheckedChange={() =>
-                      setSendMessage(sendMessage === false ? true : false)
-                    }
-                    checked={sendMessage}
-                    id="sendMessage"
-                  />
-                  <p className="text-gray-800">Desejo enviar uma mensagem</p>
-                </div>
-                {sendMessage && (
-                  <div className="justify-center gap-4 flex flex-col">
-                    <div className="flex gap-4 w-full">
-                      <div className="flex-1 flex flex-col">
-                        <Label
-                          className="text-black mb-1 text-lg"
-                          htmlFor="sender_name"
-                        >
-                          Nome
-                        </Label>
-                        <Input
-                          className="text-black"
-                          id="sender_name"
-                          placeholder="João da Silva"
-                          value={newGift?.sender_name}
-                        />
-                      </div>
-                      <div className="flex-1 flex flex-col">
-                        <Label
-                          className="text-black mb-1 text-lg"
-                          htmlFor="sender_phone"
-                        >
-                          Telefone
-                        </Label>
-                        <Input
-                          className="text-black"
-                          id="sender_phone"
-                          placeholder="(99) 9 9999-9999"
-                          value={newGift?.sender_phone}
-                        />
-                      </div>
+                <div className="space-y-5 flex flex-col">
+                  <p className="text-gray-800">
+                    Forma de Pagamento:{" "}
+                    {selectedItem.payment_form === "pix"
+                      ? "Pix"
+                      : selectedItem.payment_form === "purchase_link"
+                      ? "Link de Compra"
+                      : "Outro"}
+                  </p>
+                  <div className="justify-center flex gap-2">
+                    <input
+                      className="text-md font-semibold text-gray-700 border-black border px-4"
+                      id="payment_info"
+                      value={selectedItem.payment_info}
+                      readOnly
+                      autoFocus={true}
+                    />
+                    <Button
+                      className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
+                      onClick={() =>
+                        copyToClipboard(selectedItem.payment_info as string)
+                      }
+                    >
+                      Copiar
+                    </Button>
+                  </div>
+                  <div className="flex gap-4 w-full">
+                    <div className="flex-1 flex flex-col">
+                      <Label
+                        className="text-black mb-1 text-lg"
+                        htmlFor="sender_name"
+                      >
+                        Nome
+                      </Label>
+                      <Input
+                        className="text-black"
+                        id="sender_name"
+                        placeholder="João da Silva"
+                        value={newGift?.sender_name}
+                        required={true}
+                        onChange={(e) =>
+                          setNewGift({
+                            ...newGift,
+                            sender_name: e.target.value,
+                          })
+                        }
+                      />
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex-1 flex flex-col">
                       <Label
                         className="text-black mb-1 text-lg"
                         htmlFor="sender_phone"
                       >
-                        Sua Mensagem
+                        Telefone
                       </Label>
-                      <Textarea
-                        className="text-black resize-none"
-                        id="message"
-                        placeholder="Escreva sua mensagem..."
-                        rows={3}
-                        maxLength={250}
-                        value={newGift?.message}
+                      <Input
+                        className="text-black"
+                        id="sender_phone"
+                        placeholder="(99) 9 9999-9999"
+                        value={newGift?.sender_phone}
+                        required={true}
+                        onChange={(e) =>
+                          setNewGift({
+                            ...newGift,
+                            sender_phone: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
-                )}
-                {/* TODO: Fix send gift adding a <form> to this dialog */}
-                <Button
-                  className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
-                  onClick={() =>
-                    handleSendGift(
-                      selectedItem,
-                      newGift,
-                      CurrentUserPage?.user_id as number
-                    )
-                  }
-                  disabled={stage === "published" ? false : true}
-                >
-                  Confirmar Escolha
-                </Button>
+                  {/* TODO: Feature de envio de E-mail ao criar presente */}
+                  <div className="flex gap-2 justify-center">
+                    <Switch
+                      onCheckedChange={() =>
+                        setSendMessage(sendMessage === false ? true : false)
+                      }
+                      checked={sendMessage}
+                      id="sendMessage"
+                    />
+                    <p className="text-gray-800">Desejo enviar uma mensagem</p>
+                  </div>
+                  {sendMessage && (
+                    <div className="justify-center gap-4 flex flex-col">
+                      <div className="flex flex-col">
+                        <Label
+                          className="text-black mb-1 text-lg"
+                          htmlFor="sender_phone"
+                        >
+                          Sua Mensagem
+                        </Label>
+                        <Textarea
+                          className="text-black resize-none"
+                          id="message"
+                          placeholder="Escreva sua mensagem..."
+                          rows={3}
+                          maxLength={250}
+                          value={newGift?.message}
+                          onChange={(e) =>
+                            setNewGift({
+                              ...newGift,
+                              message: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {/* TODO: Fix send gift adding a <form> to this dialog */}
+                  <Button
+                    className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
+                    type="submit"
+                    disabled={stage === "published" ? false : true}
+                  >
+                    Confirmar Escolha
+                  </Button>
+                </div>
               </div>
-            </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>
