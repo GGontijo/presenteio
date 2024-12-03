@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu";
 import { ToastAction } from "./components/ui/toast";
+import { MyGiftsModalButton } from "./components/MyGifts";
 
 interface PageObject {
   id?: number;
@@ -393,30 +394,32 @@ export default function GiftRegistry({
     setSelectedItem(null);
   };
 
-  const handleSendGift = async (
-    item: ItemObject,
-    gift: GiftObject | null,
-    user_id: number | null
-  ) => {
-    if (!gift || !user_id) {
+  const handleSendGift = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      !selectedItem?.id ||
+      !newGift?.sender_name ||
+      !newGift?.sender_phone ||
+      !CurrentUserPage?.user_id
+    ) {
       return;
     }
 
     try {
       console.log("Enviando presente...");
       const response = await api.post("/gifts", {
-        user_id: user_id,
-        sender_name: gift.sender_name,
-        sender_phone: gift.sender_phone,
-        message: gift.message,
+        user_id: CurrentUserPage?.user_id,
+        sender_name: newGift?.sender_name,
+        sender_phone: newGift?.sender_phone,
+        message: newGift?.message,
       });
-      
+
       console.log(response);
 
       if (response.status === 200) {
         const createdGift = await response.data;
         const responseGiftItem = await api.post(
-          `/gifts/${createdGift.id}/items/${item.id}`
+          `/gifts/${createdGift.id}/items/${selectedItem?.id}`
         );
 
         if (responseGiftItem.status === 200) {
@@ -585,7 +588,7 @@ export default function GiftRegistry({
   }
 
   return (
-    <div className="flex flex-col w-screen h-full min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8">
+    <div className="flex flex-col items-center w-screen h-full min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8">
       {publicAccess ? null : (
         <nav
           className={
@@ -598,7 +601,8 @@ export default function GiftRegistry({
             <div className="flex justify-between h-14">
               {
                 <div
-                  className={`flex items-center space-x-2 justify-start ${
+                  // Corrigir padding
+                  className={`pr-48 flex items-center space-x-2 justify-start ${
                     CurrentUserPage != null && userLogged
                       ? ""
                       : "text-transparent"
@@ -616,13 +620,14 @@ export default function GiftRegistry({
                 </div>
               }
               {stage === "building" ? (
-                <nav className="flex items-center gap-2 text-xl font-mono text-gray-500 hover:text-black">
+                <div className="flex items-center justify-center gap-2 text-xl font-mono text-gray-500 hover:text-black">
                   <Gift size={24} weight="thin" />
-                  Presenteio
-                </nav>
+                  <p>Presenteio</p>
+                </div>
               ) : null}
               {stage === "building" ? (
                 <div className="flex items-center gap-4">
+                  {userLogged && <MyGiftsModalButton enabled={true} />}
                   {userLogged && (
                     <ShareModalButton
                       enabled={CurrentUserPage != null}
@@ -873,13 +878,7 @@ export default function GiftRegistry({
           </DialogHeader>
           {selectedItem && (
             <form
-              onSubmit={() =>
-                handleSendGift(
-                  selectedItem,
-                  newGift,
-                  CurrentUserPage?.user_id as number
-                )
-              }
+              onSubmit={handleSendGift}
               className="space-y-4"
               id="sendgift-form"
             >
