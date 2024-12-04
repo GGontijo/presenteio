@@ -601,8 +601,7 @@ export default function GiftRegistry({
             <div className="flex justify-between h-14">
               {
                 <div
-                  // Corrigir padding
-                  className={`pr-48 flex items-center space-x-2 justify-start ${
+                  className={`flex items-center space-x-2 justify-start ${
                     CurrentUserPage != null && userLogged
                       ? ""
                       : "text-transparent"
@@ -619,7 +618,7 @@ export default function GiftRegistry({
                   <Label htmlFor="previewMode">Ver como público</Label>
                 </div>
               }
-              {stage === "building" ? (
+              {userLogged === false ? (
                 <div className="flex items-center justify-center gap-2 text-xl font-mono text-gray-500 hover:text-black">
                   <Gift size={24} weight="thin" />
                   <p>Presenteio</p>
