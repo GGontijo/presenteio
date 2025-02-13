@@ -4,9 +4,12 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    allowedHosts: ["presenteio.ggontijo.me"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-  },
+  }
 })
