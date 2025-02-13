@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
-import GiftRegistry from "./giftRegistry";
-import Layout from "@/layout";
-import ErrorPage from "./ErrorPage";
 import api from "@/axiosConfig";
+import Layout from "@/layout";
+import { useEffect, useState } from "react";
+import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import ErrorPage from "./ErrorPage";
+import GiftRegistry from "./GiftRegistry";
 
 // Interface para os dados da página
 interface PageObject {
@@ -68,7 +68,7 @@ const App = () => {
     <Layout>
       <Routes>
         {/* Página de login */}
-        <Route path="/" element={<GiftRegistry />} />
+        <Route path="/" element={<GiftRegistry page={page} />} />
 
         {/* Página para rotas dinâmicas */}
         <Route

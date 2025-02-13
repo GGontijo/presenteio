@@ -1,14 +1,6 @@
-import React from "react";
 import { Button } from "./components/ui/button";
 
 const ErrorPage = () => {
-  const retryAfter = () => {
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 10000);
-  };
-
-  // retryAfter();
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100 text-center font-mono">

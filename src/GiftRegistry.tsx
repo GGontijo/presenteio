@@ -1,11 +1,10 @@
 "use client";
 
 import api from "@/axiosConfig";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ShareModalButton } from "@/components/ShareModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Cookies from "js-cookie";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -14,9 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle } from "lucide-react";
-import React, { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -25,12 +21,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ShareModalButton } from "@/components/shareModal";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import { Gift } from "@phosphor-icons/react";
-import { useEffect } from "react";
-import { LoginModalButton } from "./components/loginModal";
-import { jwtDecode } from "jwt-decode";
 import { CredentialResponse } from "@react-oauth/google";
+import Cookies from "js-cookie";
+import { jwtDecode } from "jwt-decode";
+import { PlusCircle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { LoginModalButton } from "./components/loginModal";
+import { MyGiftsModalButton } from "./components/MyGifts";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +39,6 @@ import {
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu";
 import { ToastAction } from "./components/ui/toast";
-import { MyGiftsModalButton } from "./components/MyGifts";
 
 interface PageObject {
   id?: number;

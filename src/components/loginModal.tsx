@@ -3,7 +3,6 @@ import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -11,7 +10,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 
 export function LoginModalButton({
   onLoginSuccess,
