@@ -461,15 +461,15 @@ export default function GiftRegistry({
     }
   };
 
-  const handleDescChange = async (desc: string) => {
-    if (desc.trim().length > 0 && desc !== CurrentUserPage?.description) {
+  const handleDescChange = async (description: string) => {
+    if (description.trim().length > 0 && description !== CurrentUserPage?.description) {
       const response = await api.patch(`/pages/${CurrentUserPage?.id}`, {
-        description: desc,
+        description: description,
       });
 
       if (response.status === 200) {
-        setCurrentUserPage({ ...CurrentUserPage, description: desc });
-        setDescription(desc);
+        setCurrentUserPage({ ...CurrentUserPage, description: description });
+        setDescription(description);
         toast({
           title: "Descrição da página editado com sucesso!",
         });
@@ -754,7 +754,7 @@ export default function GiftRegistry({
                       </p>
                     </div>
                     <p className="text-sm mb-2 text-center font-mono">
-                      {item.desc}
+                      {item.description}
                     </p>
                     <Button
                       onClick={() => openGiftModal(item)}
@@ -888,7 +888,7 @@ export default function GiftRegistry({
                     className="relative max-w-[90%] sm:max-w-[300px] max-h-[500px] center mb-5 rounded-lg shadow-2xl"
                   />
                 </div>
-                <p className="mb-4">{selectedItem.desc}</p>
+                <p className="mb-4">{selectedItem.description}</p>
                 <p className="mb-2 text-3xl font-mono font-bold">
                   {"R$ " + selectedItem?.value}
                 </p>
@@ -1042,9 +1042,9 @@ export default function GiftRegistry({
               </Label>
               <Textarea
                 id="giftImage"
-                value={newItem?.desc}
+                value={newItem?.description}
                 onChange={(e) =>
-                  setNewItem({ ...newItem, desc: e.target.value })
+                  setNewItem({ ...newItem, description: e.target.value })
                 }
                 placeholder="Descrição do Item (Opcional)"
               />
@@ -1205,7 +1205,7 @@ export default function GiftRegistry({
               <Label className="text-black" htmlFor="giftImage">
                 Descrição
               </Label>
-              <Textarea id="giftImage" value={selectedItem?.desc} />
+              <Textarea id="giftImage" value={selectedItem?.description} />
             </div>
             <div>
               <Label className="text-black" htmlFor="giftImage">
