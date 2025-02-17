@@ -52,7 +52,7 @@ interface PageObject {
 interface ItemObject {
   id?: number; // TODO: Obter id do retorno da API
   name?: string;
-  desc?: string;
+  description?: string;
   image_url?: string;
   value?: number;
   payment_form?: string;
