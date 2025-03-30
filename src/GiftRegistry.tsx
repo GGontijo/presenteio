@@ -28,7 +28,7 @@ import { CredentialResponse } from "@react-oauth/google";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import { PlusCircle } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { LoginModalButton } from "./components/loginModal";
 import { MyGiftsModalButton } from "./components/MyGifts";
 import {
@@ -117,6 +117,7 @@ export default function GiftRegistry({
   const [newItem, setNewItem] = useState<ItemObject | null>(null);
   const [newGift, setNewGift] = useState<GiftObject | null>(null);
   const [itemUseImageLink, setItemUseImageLink] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const userLogout = () => {
     setCurrentUser(null);
@@ -461,8 +462,21 @@ export default function GiftRegistry({
     }
   };
 
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto"; // Reset para recálculo
+      el.style.height = `${el.scrollHeight}px`; // Altura ideal
+    }
+
+    setDescription(e.target.value);
+  };
+
   const handleDescChange = async (description: string) => {
-    if (description.trim().length > 0 && description !== CurrentUserPage?.description) {
+    if (
+      description.trim().length > 0 &&
+      description !== CurrentUserPage?.description
+    ) {
       const response = await api.patch(`/pages/${CurrentUserPage?.id}`, {
         description: description,
       });
@@ -696,20 +710,21 @@ export default function GiftRegistry({
               )}
               {stage === "building" ? (
                 <textarea
+                  ref={textareaRef}
                   value={description}
                   placeholder="Clique para adicionar uma descrição"
                   onBlur={(e) => handleDescChange(e.target.value)}
-                  onChange={(e) => setDescription(e.target.value)}
-                  maxLength={250}
-                  className="text-gray-800 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none"
+                  onChange={handleTextareaChange}
+                  maxLength={500}
+                  className="text-gray-800 max-w-2xl mx-auto bg-transparent border-black border text-center w-full resize-none overflow-hidden"
                   rows={3}
                 />
               ) : (
                 <textarea
                   value={description}
                   disabled
-                  maxLength={250}
-                  className="text-gray-600 max-w-2xl mx-auto bg-transparent text-center w-full resize-none"
+                  maxLength={500}
+                  className="text-gray-600 max-w-2xl mx-auto bg-transparent text-center w-full resize-none overflow-hidden"
                   rows={3}
                 />
               )}
@@ -801,8 +816,9 @@ export default function GiftRegistry({
                 <div className="space-y-4">
                   <Input
                     type="text"
-                    placeholder="Escolha um identificador para a sua página"
+                    placeholder="Escolha um nome para a sua página"
                     value={newPageName}
+                    maxLength={50}
                     onChange={handlePageNameFormat}
                   />
                   {newPageName && (
@@ -1053,16 +1069,13 @@ export default function GiftRegistry({
               {/* Switch para alternar entre link público e upload */}
               <div className="flex gap-2">
                 <Label className="text-black flex items-center mb-2">
-                  Upload do Arquivo
+                  Usar um Link com a Imagem
                 </Label>
                 <Switch
                   className="ml-2"
                   checked={itemUseImageLink}
                   onCheckedChange={(value) => setItemUseImageLink(value)}
                 />
-                <Label className="text-black flex items-center mb-2">
-                  Link da Internet
-                </Label>
               </div>
 
               {itemUseImageLink ? (
@@ -1143,7 +1156,6 @@ export default function GiftRegistry({
                   placeholder="0,00"
                   inputMode="decimal"
                   className="flex items-center pl-9 text-xl"
-                  required
                 />
               </div>
             </div>
@@ -1214,44 +1226,45 @@ export default function GiftRegistry({
               <Input id="giftImage" value={selectedItem?.image_url} required />
             </div>
             <div>
-              <Label className="text-black" htmlFor="giftValue">
-                Valor do Item
-              </Label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <span className="text-muted-foreground">R$</span>
+              <div className="space-y-2">
+                <Label className="text-black" htmlFor="giftValue">
+                  Valor do Item
+                </Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <span className="text-muted-foreground">R$</span>
+                  </div>
+                  <Input
+                    id="giftValue"
+                    type="text"
+                    value={
+                      selectedItem?.value
+                        ? new Intl.NumberFormat("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }).format(selectedItem?.value)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      let value = e.target.value;
+
+                      // Remove caracteres não numéricos, mantendo a vírgula
+                      value = value.replace(/\D/g, "");
+
+                      // Divide por 100 para obter o valor correto
+                      const floatValue = Number(value) / 100;
+
+                      // Atualiza o estado usando setSelectedItem
+                      setSelectedItem((prevItem) => ({
+                        ...prevItem,
+                        value: floatValue,
+                      }));
+                    }}
+                    placeholder="0,00"
+                    inputMode="decimal"
+                    className="flex items-center pl-9 text-xl"
+                  />
                 </div>
-                <Input
-                  id="giftValue"
-                  type="text"
-                  value={
-                    selectedItem?.value
-                      ? new Intl.NumberFormat("pt-BR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }).format(selectedItem?.value)
-                      : ""
-                  }
-                  onChange={(e) => {
-                    let value = e.target.value;
-
-                    // Remove caracteres não numéricos, mantendo a vírgula
-                    value = value.replace(/\D/g, "");
-
-                    // Divide por 100 para obter o valor correto
-                    const floatValue = Number(value) / 100;
-
-                    // Atualiza o estado usando setSelectedItem
-                    setSelectedItem((prevItem) => ({
-                      ...prevItem,
-                      value: floatValue,
-                    }));
-                  }}
-                  placeholder="0,00"
-                  inputMode="decimal"
-                  className="flex items-center pl-9 text-xl"
-                  required
-                />
               </div>
             </div>
             <div>
