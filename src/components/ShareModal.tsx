@@ -12,13 +12,54 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import api from "@/axiosConfig";
+import { toast } from "@/hooks/use-toast";
 
 interface ShareModalButtonProps {
   enabled: boolean;
   domain?: string;
+  pageId?: number;
 }
 
-export function ShareModalButton({ enabled, domain }: ShareModalButtonProps) {
+const publishPage = async (pageId?: number) => {
+  if (!pageId) {
+    toast({
+      title: "Erro ao publicar a página",
+      description: "ID da página não encontrado.",
+    });
+    return;
+  }
+  try {
+    const response = await api.patch(`/pages/${pageId}`, {
+      status: "published",
+    });
+    if (response.status === 200) {
+      toast({
+        title: "Página publicada com sucesso!",
+      });
+    } else {
+      console.error("Erro ao publicar a página: ", response.statusText);
+      toast({
+        title: "Houve um erro ao tentar publicar a página!",
+        description:
+          "Erro ao tentar publicar a página. Tente novamente mais tarde.",
+      });
+    }
+  } catch (error) {
+    console.error("Erro ao publicar a página: ", error);
+    toast({
+      title: "Houve um erro ao tentar publicar a página!",
+      description:
+        "Erro ao tentar publicar a página. Tente novamente mais tarde.",
+    });
+  }
+};
+
+export function ShareModalButton({
+  enabled,
+  domain,
+  pageId,
+}: ShareModalButtonProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -50,7 +91,9 @@ export function ShareModalButton({ enabled, domain }: ShareModalButtonProps) {
             size="sm"
             className="px-3"
             onClick={() =>
-              navigator.clipboard.writeText(`${import.meta.env.VITE_BASE_URL}/${domain}`)
+              navigator.clipboard.writeText(
+                `${import.meta.env.VITE_BASE_URL}/${domain}`
+              )
             }
           >
             <span className="sr-only">Copiar</span>
@@ -59,7 +102,11 @@ export function ShareModalButton({ enabled, domain }: ShareModalButtonProps) {
         </div>
         <DialogFooter className="sm:justify-start">
           <DialogClose asChild>
-            <Button type="button" variant="secondary">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => publishPage(pageId)}
+            >
               Publicar
             </Button>
           </DialogClose>

@@ -117,6 +117,7 @@ export default function GiftRegistry({
   const [newItem, setNewItem] = useState<ItemObject | null>(null);
   const [newGift, setNewGift] = useState<GiftObject | null>(null);
   const [itemUseImageLink, setItemUseImageLink] = useState(false);
+  const [provideItemDetails, setProvideItemDetails] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const userLogout = () => {
@@ -296,12 +297,7 @@ export default function GiftRegistry({
   const addItem = async (e: React.FormEvent) => {
     console.log("Adicionando item...");
     e.preventDefault();
-    if (
-      newItem?.name &&
-      newItem?.image_url &&
-      newItem?.value &&
-      newItem?.payment_form
-    ) {
+    if (newItem?.name && newItem?.image_url) {
       try {
         const responseNewItem = await api.post("/items", newItem);
         console.log(responseNewItem);
@@ -322,7 +318,7 @@ export default function GiftRegistry({
         console.log(err);
         toast({
           title: "Houve um erro ao tentar adicionar o item.",
-          description: "Erro ao adicionar o item. Tente mais tarde.",
+          description: "Erro ao adicionar o item. Tente novamente mais tarde.",
           action: <ToastAction altText="Tentar novamente" onClick={addItem} />,
         });
       }
@@ -358,7 +354,8 @@ export default function GiftRegistry({
         } else {
           toast({
             title: "Houve um erro ao tentar adicionar o item.",
-            description: "Erro ao adicionar o item. Tente mais tarde.",
+            description:
+              "Erro ao adicionar o item. Tente novamente mais tarde.",
           });
         }
 
@@ -367,7 +364,7 @@ export default function GiftRegistry({
         console.log(err);
         toast({
           title: "Houve um erro ao tentar adicionar o item.",
-          description: "Erro ao adicionar o item. Tente mais tarde.",
+          description: "Erro ao adicionar o item. Tente novamente mais tarde.",
         });
       }
     }
@@ -435,7 +432,8 @@ export default function GiftRegistry({
     } catch {
       toast({
         title: "Houve um erro ao tentar criar o presente!",
-        description: "Erro ao tentar criar o presente. Tente mais tarde.",
+        description:
+          "Erro ao tentar criar o presente. Tente novamente mais tarde.",
       });
       resetNewGift();
     }
@@ -456,7 +454,8 @@ export default function GiftRegistry({
       } else {
         toast({
           title: "Houve um erro ao tentar editar o título da página.",
-          description: "Erro ao editar o título da página. Tente mais tarde.",
+          description:
+            "Erro ao editar o título da página. Tente novamente mais tarde.",
         });
       }
     }
@@ -491,7 +490,7 @@ export default function GiftRegistry({
         toast({
           title: "Houve um erro ao tentar editar a descrição da página.",
           description:
-            "Erro ao editar editar a descrição da página. Tente mais tarde.",
+            "Erro ao editar editar a descrição da página. Tente novamente mais tarde.",
         });
       }
     }
@@ -517,7 +516,7 @@ export default function GiftRegistry({
         toast({
           title: "Houve um erro ao tentar realizar upload.",
           description:
-            "Houve um erro ao tentar realizar upload. Tente mais tarde.",
+            "Houve um erro ao tentar realizar upload. Tente novamente mais tarde.",
         });
       }
     } catch (err) {
@@ -644,6 +643,7 @@ export default function GiftRegistry({
                     <ShareModalButton
                       enabled={CurrentUserPage != null}
                       domain={CurrentUserPage?.domain}
+                      pageId={CurrentUserPage?.id ?? 0}
                     />
                   )}
                   {userLogged == false ? (
@@ -763,11 +763,13 @@ export default function GiftRegistry({
                         {item.name}
                       </p>
                     </div>
-                    <div>
-                      <p className="mb-2 text-lg font-mono text-center text-gray-700">
-                        R$ {item.value}
-                      </p>
-                    </div>
+                    {item.value ? (
+                      <div>
+                        <p className="mb-2 text-lg font-mono text-center text-gray-700">
+                          R$ {item.value}
+                        </p>
+                      </div>
+                    ) : null}
                     <p className="text-sm mb-2 text-center font-mono">
                       {item.description}
                     </p>
@@ -904,126 +906,137 @@ export default function GiftRegistry({
                     className="relative max-w-[90%] sm:max-w-[300px] max-h-[500px] center mb-5 rounded-lg shadow-2xl"
                   />
                 </div>
+
                 <p className="mb-4">{selectedItem.description}</p>
-                <p className="mb-2 text-3xl font-mono font-bold">
-                  {"R$ " + selectedItem?.value}
-                </p>
-                <div className="space-y-5 flex flex-col">
-                  <p className="text-gray-800">
-                    Forma de Pagamento:{" "}
-                    {selectedItem.payment_form === "pix"
-                      ? "Pix"
-                      : selectedItem.payment_form === "purchase_link"
-                      ? "Link de Compra"
-                      : "Outro"}
-                  </p>
-                  <div className="justify-center flex gap-2">
-                    <input
-                      className="text-md font-semibold text-gray-700 border-black border px-4"
-                      id="payment_info"
-                      value={selectedItem.payment_info}
-                      readOnly
-                      autoFocus={true}
-                    />
-                    <Button
-                      className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
-                      onClick={() =>
-                        copyToClipboard(selectedItem.payment_info as string)
-                      }
-                    >
-                      Copiar
-                    </Button>
-                  </div>
-                  <div className="flex gap-4 w-full">
-                    <div className="flex-1 flex flex-col">
-                      <Label
-                        className="text-black mb-1 text-lg"
-                        htmlFor="sender_name"
-                      >
-                        Nome
-                      </Label>
-                      <Input
-                        className="text-black"
-                        id="sender_name"
-                        placeholder="João da Silva"
-                        value={newGift?.sender_name}
-                        required={true}
-                        onChange={(e) =>
-                          setNewGift({
-                            ...newGift,
-                            sender_name: e.target.value,
-                          })
-                        }
-                      />
+                {selectedItem.value && (
+                  <div className="space-y-5 flex flex-col">
+                    <div className="space-y-5 flex flex-col">
+                      <p className="mb-2 text-3xl font-mono font-bold">
+                        {"R$ " + selectedItem?.value}
+                      </p>
+
+                      <p className="text-gray-800">
+                        Forma de Pagamento:{" "}
+                        {selectedItem.payment_form === "pix"
+                          ? "Pix"
+                          : selectedItem.payment_form === "purchase-link"
+                          ? "Link de Compra"
+                          : selectedItem.payment_form === "other"
+                          ? "Outro"
+                          : null}
+                      </p>
+                      <div className="justify-center flex gap-2">
+                        <input
+                          className="text-md font-semibold text-gray-700 border-black border px-4"
+                          id="payment_info"
+                          value={selectedItem.payment_info}
+                          readOnly
+                          autoFocus={true}
+                        />
+                        <Button
+                          className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
+                          onClick={() =>
+                            copyToClipboard(selectedItem.payment_info as string)
+                          }
+                        >
+                          Copiar
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex-1 flex flex-col">
-                      <Label
-                        className="text-black mb-1 text-lg"
-                        htmlFor="sender_phone"
-                      >
-                        Telefone
-                      </Label>
-                      <Input
-                        className="text-black"
-                        id="sender_phone"
-                        placeholder="(99) 9 9999-9999"
-                        value={newGift?.sender_phone}
-                        required={true}
-                        onChange={(e) =>
-                          setNewGift({
-                            ...newGift,
-                            sender_phone: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                  {/* TODO: Feature de envio de E-mail ao criar presente */}
-                  <div className="flex gap-2 justify-center">
-                    <Switch
-                      onCheckedChange={() =>
-                        setSendMessage(sendMessage === false ? true : false)
-                      }
-                      checked={sendMessage}
-                      id="sendMessage"
-                    />
-                    <p className="text-gray-800">Desejo enviar uma mensagem</p>
-                  </div>
-                  {sendMessage && (
-                    <div className="justify-center gap-4 flex flex-col">
-                      <div className="flex flex-col">
+
+                    <div className="flex gap-4 w-full">
+                      <div className="flex-1 flex flex-col">
+                        <Label
+                          className="text-black mb-1 text-lg"
+                          htmlFor="sender_name"
+                        >
+                          Nome
+                        </Label>
+                        <Input
+                          className="text-black"
+                          id="sender_name"
+                          placeholder="João da Silva"
+                          value={newGift?.sender_name}
+                          required={true}
+                          onChange={(e) =>
+                            setNewGift({
+                              ...newGift,
+                              sender_name: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="flex-1 flex flex-col">
                         <Label
                           className="text-black mb-1 text-lg"
                           htmlFor="sender_phone"
                         >
-                          Sua Mensagem
+                          Telefone
                         </Label>
-                        <Textarea
-                          className="text-black resize-none"
-                          id="message"
-                          placeholder="Escreva sua mensagem..."
-                          rows={3}
-                          maxLength={250}
-                          value={newGift?.message}
+                        <Input
+                          className="text-black"
+                          id="sender_phone"
+                          placeholder="(99) 9 9999-9999"
+                          value={newGift?.sender_phone}
+                          required={true}
                           onChange={(e) =>
                             setNewGift({
                               ...newGift,
-                              message: e.target.value,
+                              sender_phone: e.target.value,
                             })
                           }
                         />
                       </div>
                     </div>
-                  )}
-                  {/* TODO: Fix send gift adding a <form> to this dialog */}
-                  <Button
-                    className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
-                    type="submit"
-                    disabled={stage === "published" ? false : true}
-                  >
-                    Confirmar Escolha
-                  </Button>
-                </div>
+                    {/* TODO: Feature de envio de E-mail ao criar presente */}
+                    <div className="flex gap-2 justify-center">
+                      <Switch
+                        onCheckedChange={() =>
+                          setSendMessage(sendMessage === false ? true : false)
+                        }
+                        checked={sendMessage}
+                        id="sendMessage"
+                      />
+                      <p className="text-gray-800">
+                        Desejo enviar uma mensagem
+                      </p>
+                    </div>
+                    {sendMessage && (
+                      <div className="justify-center gap-4 flex flex-col">
+                        <div className="flex flex-col">
+                          <Label
+                            className="text-black mb-1 text-lg"
+                            htmlFor="sender_phone"
+                          >
+                            Sua Mensagem
+                          </Label>
+                          <Textarea
+                            className="text-black resize-none"
+                            id="message"
+                            placeholder="Escreva sua mensagem..."
+                            rows={3}
+                            maxLength={250}
+                            value={newGift?.message}
+                            onChange={(e) =>
+                              setNewGift({
+                                ...newGift,
+                                message: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {/* TODO: Fix send gift adding a <form> to this dialog */}
+                    <Button
+                      className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
+                      type="submit"
+                      disabled={stage === "published" ? false : true}
+                    >
+                      Confirmar Escolha
+                    </Button>
+                  </div>
+                )}
               </div>
             </form>
           )}
@@ -1122,77 +1135,98 @@ export default function GiftRegistry({
                 </div>
               )}
             </div>
-            <div>
-              <Label className="text-black" htmlFor="giftValue">
-                Valor do Item
-              </Label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <span className="text-muted-foreground">R$</span>
-                </div>
-                <Input
-                  id="giftValue"
-                  type="text"
-                  value={
-                    newItem?.value
-                      ? new Intl.NumberFormat("pt-BR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }).format(newItem?.value)
-                      : ""
-                  }
-                  onChange={(e) => {
-                    let value = e.target.value;
-
-                    // Remove caracteres não numéricos, mantendo a vírgula
-                    value = value.replace(/\D/g, "");
-
-                    // Divide por 100 para obter o valor correto
-                    const floatValue = Number(value) / 100;
-
-                    // Atualiza o estado com o valor numérico
-                    setNewItem({ ...newItem, value: floatValue });
-                  }}
-                  placeholder="0,00"
-                  inputMode="decimal"
-                  className="flex items-center pl-9 text-xl"
-                />
+            <div className="flex gap-2">
+              <div>
+                <Label className="text-black flex items-center mb-2">
+                  Adicionar informações de Compra
+                </Label>
+                <p className="text-xs text-gray-800">
+                  Informe onde comprar e qual o valor do item
+                </p>
               </div>
-            </div>
-            <div>
-              <Label className="text-black" htmlFor="itemPaymentForm">
-                Forma de Pagamento
-              </Label>
-              <Select onValueChange={handlePaymentFormChange} required>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Selecionar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pix">Pix</SelectItem>
-                  <SelectItem value="purchase-link">Link de Compra</SelectItem>
-                  <SelectItem value="other">Outro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-black" htmlFor="itemName">
-                Informação de Pagamento
-              </Label>
-              <Input
-                id="itemPaymentInfo"
-                value={newItem?.payment_info}
-                onChange={(e) =>
-                  setNewItem({ ...newItem, payment_info: e.target.value })
-                }
-                placeholder={
-                  paymentForm === "pix"
-                    ? "Código Pix"
-                    : paymentForm === "purchase-link"
-                    ? "Link de Compra do Produto"
-                    : "Insira Informação de Pagamento"
-                }
+              <Switch
+                className="ml-2"
+                checked={provideItemDetails}
+                onCheckedChange={(value) => setProvideItemDetails(value)}
               />
             </div>
+            {provideItemDetails ? (
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-black" htmlFor="giftValue">
+                    Valor do Item
+                  </Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <span className="text-muted-foreground">R$</span>
+                    </div>
+                    <Input
+                      id="giftValue"
+                      type="text"
+                      value={
+                        newItem?.value
+                          ? new Intl.NumberFormat("pt-BR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }).format(newItem?.value)
+                          : ""
+                      }
+                      onChange={(e) => {
+                        let value = e.target.value;
+
+                        // Remove caracteres não numéricos, mantendo a vírgula
+                        value = value.replace(/\D/g, "");
+
+                        // Divide por 100 para obter o valor correto
+                        const floatValue = Number(value) / 100;
+
+                        // Atualiza o estado com o valor numérico
+                        setNewItem({ ...newItem, value: floatValue });
+                      }}
+                      placeholder="0,00"
+                      inputMode="decimal"
+                      className="flex items-center pl-9 text-xl"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-black" htmlFor="itemPaymentForm">
+                    Forma de Pagamento
+                  </Label>
+                  <Select onValueChange={handlePaymentFormChange}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Selecionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pix">Pix</SelectItem>
+                      <SelectItem value="purchase-link">
+                        Link de Compra
+                      </SelectItem>
+                      <SelectItem value="other">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-black" htmlFor="itemName">
+                    Informação de Pagamento
+                  </Label>
+                  <Input
+                    id="itemPaymentInfo"
+                    value={newItem?.payment_info}
+                    onChange={(e) =>
+                      setNewItem({ ...newItem, payment_info: e.target.value })
+                    }
+                    placeholder={
+                      paymentForm === "pix"
+                        ? "Código Pix"
+                        : paymentForm === "purchase-link"
+                        ? "Link de Compra do Produto"
+                        : "Insira Informação de Pagamento"
+                    }
+                  />
+                </div>
+              </div>
+            ) : null}
             <Button type="submit" className="w-full" onSubmit={addItem}>
               Adicionar Item na Página
             </Button>
@@ -1274,7 +1308,6 @@ export default function GiftRegistry({
               <Select
                 value={selectedItem?.payment_form}
                 onValueChange={handleEditPaymentFormChange}
-                required
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Selecionar" />
