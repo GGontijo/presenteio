@@ -316,7 +316,8 @@ export default function GiftRegistry({
       selectedItem?.name &&
       selectedItem?.image_url &&
       selectedItem?.value &&
-      selectedItem?.payment_form
+      selectedItem?.payment_form &&
+      selectedItem?.payment_info
     ) {
       try {
         const responseEditItem = await api.put(
