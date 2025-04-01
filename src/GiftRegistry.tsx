@@ -4,7 +4,6 @@ import api from "@/axiosConfig";
 import { ShareModalButton } from "@/components/ShareModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +29,14 @@ import { jwtDecode } from "jwt-decode";
 import { PlusCircle } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { LoginModalButton } from "./components/loginModal";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -533,7 +540,7 @@ export default function GiftRegistry({
   }
 
   return (
-    <div className="flex flex-col items-center w-screen h-full min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8">
+    <div className="flex flex-col items-center w-full h-full min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800 p-8">
       {publicAccess ? null : (
         <nav
           className={
@@ -840,6 +847,41 @@ export default function GiftRegistry({
           <h1 className="text-center text-xl text-gray-600">
             Faça login para criar a sua página
           </h1>
+          <div className="flex justify-center w-full">
+            <Carousel className="w-full">
+              <CarouselContent>
+                <CarouselItem key={"1"}>
+                  <div className="p-1">
+                    <Card>
+                      <CardContent className="flex aspect-square items-center justify-center p-6">
+                        <img src="https://avatars.githubusercontent.com/u/38219914?v=4"></img>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CarouselItem>
+                <CarouselItem key={"1"}>
+                  <div className="p-1">
+                    <Card>
+                      <CardContent className="flex aspect-square items-center justify-center p-6">
+                        teste
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CarouselItem>
+                <CarouselItem key={"1"}>
+                  <div className="p-1">
+                    <Card>
+                      <CardContent className="flex aspect-square items-center justify-center p-6">
+                        teste
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CarouselItem>
+              </CarouselContent>
+              <CarouselPrevious />
+              <CarouselNext />
+            </Carousel>
+          </div>
         </div>
       )}
 
