@@ -314,10 +314,7 @@ export default function GiftRegistry({
     if (
       selectedItem &&
       selectedItem?.name &&
-      selectedItem?.image_url &&
-      selectedItem?.value &&
-      selectedItem?.payment_form &&
-      selectedItem?.payment_info
+      selectedItem?.image_url
     ) {
       try {
         const responseEditItem = await api.put(
@@ -715,9 +712,8 @@ export default function GiftRegistry({
                           Copiar
                         </Button>
                       </div>
-                    ) : null}
-                    {item.payment_info &&
-                    item.payment_form == "purchase-link" ? (
+                    ) : item.payment_form == "purchase-link" ? (
+                      
                       <div className="text-center mb-2">
                         <Button
                           onClick={() => open(item.payment_info)}
@@ -726,6 +722,10 @@ export default function GiftRegistry({
                           {"Comprar"}
                         </Button>
                       </div>
+                    ) : item.payment_form == "other" ? (
+                      <p className="text-sm mb-2 text-center font-mono">
+                      {item.payment_info}
+                    </p>
                     ) : null}
                   </CardContent>
                 </Card>
@@ -980,7 +980,8 @@ export default function GiftRegistry({
                   <Label className="text-black" htmlFor="itemPaymentForm">
                     Forma de Pagamento
                   </Label>
-                  <Select onValueChange={handlePaymentFormChange}>
+                  <Select value={selectedItem?.payment_form} 
+                    onValueChange={handlePaymentFormChange}>
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Selecionar" />
                     </SelectTrigger>
@@ -1113,6 +1114,9 @@ export default function GiftRegistry({
               <Input
                 id="itemPaymentInfo"
                 value={selectedItem?.payment_info}
+                onChange={(e) =>
+                  setSelectedItem({ ...selectedItem, payment_info: e.target.value })
+                }
                 placeholder={
                   paymentForm === "pix"
                     ? "Código Pix"
