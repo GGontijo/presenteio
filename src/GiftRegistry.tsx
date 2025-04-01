@@ -30,7 +30,6 @@ import { jwtDecode } from "jwt-decode";
 import { PlusCircle } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { LoginModalButton } from "./components/loginModal";
-import { MyGiftsModalButton } from "./components/MyGifts";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,15 +56,6 @@ interface ItemObject {
   value?: number;
   payment_form?: string;
   payment_info?: string;
-}
-
-interface GiftObject {
-  id?: number; // TODO: Obter id do retorno da API
-  sender_name?: string;
-  sender_phone?: string;
-  message?: string;
-  user_id?: number;
-  total?: number;
 }
 
 interface UserObject {
@@ -98,7 +88,6 @@ export default function GiftRegistry({
   const [items, setItems] = useState<ItemObject[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ItemObject | null>(null);
@@ -109,13 +98,11 @@ export default function GiftRegistry({
   );
   const [publicAccess] = useState(isPublic);
   const [paymentForm, setPaymentForm] = useState("");
-  const [sendMessage, setSendMessage] = useState(false);
   const [userLogged, setUserLogged] = useState(false);
   const [newPageName, setNewPageName] = useState("");
   const baseDomain = import.meta.env.VITE_BASE_URL;
   const { toast } = useToast();
   const [newItem, setNewItem] = useState<ItemObject | null>(null);
-  const [newGift, setNewGift] = useState<GiftObject | null>(null);
   const [itemUseImageLink, setItemUseImageLink] = useState(false);
   const [provideItemDetails, setProvideItemDetails] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -138,10 +125,6 @@ export default function GiftRegistry({
 
   const resetNewItem = () => {
     setNewItem(null);
-  };
-
-  const resetNewGift = () => {
-    setNewGift(null);
   };
 
   useEffect(() => {
@@ -370,17 +353,6 @@ export default function GiftRegistry({
     }
   };
 
-  const openGiftModal = (item: ItemObject) => {
-    setSendMessage(false);
-    setSelectedItem(item);
-    setIsGiftModalOpen(true);
-  };
-
-  const closeGiftModal = () => {
-    setIsGiftModalOpen(false);
-    setSelectedItem(null);
-  };
-
   const openEditModal = (item: ItemObject) => {
     setSelectedItem(item);
     setIsEditItemModalOpen(true);
@@ -389,54 +361,6 @@ export default function GiftRegistry({
   const closeEditModal = () => {
     setIsEditItemModalOpen(false);
     setSelectedItem(null);
-  };
-
-  const handleSendGift = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (
-      !selectedItem?.id ||
-      !newGift?.sender_name ||
-      !newGift?.sender_phone ||
-      !CurrentUserPage?.user_id
-    ) {
-      return;
-    }
-
-    try {
-      console.log("Enviando presente...");
-      const response = await api.post("/gifts", {
-        user_id: CurrentUserPage?.user_id,
-        sender_name: newGift?.sender_name,
-        sender_phone: newGift?.sender_phone,
-        message: newGift?.message,
-      });
-
-      console.log(response);
-
-      if (response.status === 200) {
-        const createdGift = await response.data;
-        const responseGiftItem = await api.post(
-          `/gifts/${createdGift.id}/items/${selectedItem?.id}`
-        );
-
-        if (responseGiftItem.status === 200) {
-          toast({
-            title: "Presente enviado com sucesso!",
-          });
-          resetNewGift();
-          closeGiftModal();
-        }
-      }
-
-      console.log("f presente...");
-    } catch {
-      toast({
-        title: "Houve um erro ao tentar criar o presente!",
-        description:
-          "Erro ao tentar criar o presente. Tente novamente mais tarde.",
-      });
-      resetNewGift();
-    }
   };
 
   const handleTitleChange = async (title: string) => {
@@ -638,7 +562,6 @@ export default function GiftRegistry({
               ) : null}
               {stage === "building" ? (
                 <div className="flex items-center gap-4">
-                  {userLogged && <MyGiftsModalButton enabled={true} />}
                   {userLogged && (
                     <ShareModalButton
                       enabled={CurrentUserPage != null}
@@ -773,12 +696,36 @@ export default function GiftRegistry({
                     <p className="text-sm mb-2 text-center font-mono">
                       {item.description}
                     </p>
-                    <Button
-                      onClick={() => openGiftModal(item)}
-                      className="w-full mt-auto"
-                    >
-                      Quero Presentear
-                    </Button>
+                    {item.payment_form == "pix" ? (
+                      <div className="justify-center flex gap-2">
+                        <input
+                          className="text-md font-semibold text-gray-700 border-black border px-4"
+                          id="payment_info"
+                          value={item.payment_info}
+                          readOnly
+                          autoFocus={true}
+                        />
+                        <Button
+                          className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
+                          onClick={() =>
+                            copyToClipboard(item.payment_info as string)
+                          }
+                        >
+                          Copiar
+                        </Button>
+                      </div>
+                    ) : null}
+                    {item.payment_info &&
+                    item.payment_form == "purchase-link" ? (
+                      <div className="text-center mb-2">
+                        <Button
+                          onClick={() => open(item.payment_info)}
+                          className="w-full mt-auto"
+                        >
+                          {"Comprar"}
+                        </Button>
+                      </div>
+                    ) : null}
                   </CardContent>
                 </Card>
               ))}
@@ -881,167 +828,6 @@ export default function GiftRegistry({
           </h1>
         </div>
       )}
-
-      <Dialog open={isGiftModalOpen} onOpenChange={setIsGiftModalOpen}>
-        <DialogContent
-          className="max-h-screen overflow-y-auto"
-          aria-describedby="addgift-description"
-        >
-          <DialogHeader>
-            <DialogTitle className="text-center">
-              {selectedItem?.name}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedItem && (
-            <form
-              onSubmit={handleSendGift}
-              className="space-y-4"
-              id="sendgift-form"
-            >
-              <div className="text-center">
-                <div className="flex justify-center">
-                  <img
-                    src={selectedItem.image_url}
-                    alt={selectedItem.image_url}
-                    className="relative max-w-[90%] sm:max-w-[300px] max-h-[500px] center mb-5 rounded-lg shadow-2xl"
-                  />
-                </div>
-
-                <p className="mb-4">{selectedItem.description}</p>
-                {selectedItem.value && (
-                  <div className="space-y-5 flex flex-col">
-                    <div className="space-y-5 flex flex-col">
-                      <p className="mb-2 text-3xl font-mono font-bold">
-                        {"R$ " + selectedItem?.value}
-                      </p>
-
-                      <p className="text-gray-800">
-                        Forma de Pagamento:{" "}
-                        {selectedItem.payment_form === "pix"
-                          ? "Pix"
-                          : selectedItem.payment_form === "purchase-link"
-                          ? "Link de Compra"
-                          : selectedItem.payment_form === "other"
-                          ? "Outro"
-                          : null}
-                      </p>
-                      <div className="justify-center flex gap-2">
-                        <input
-                          className="text-md font-semibold text-gray-700 border-black border px-4"
-                          id="payment_info"
-                          value={selectedItem.payment_info}
-                          readOnly
-                          autoFocus={true}
-                        />
-                        <Button
-                          className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
-                          onClick={() =>
-                            copyToClipboard(selectedItem.payment_info as string)
-                          }
-                        >
-                          Copiar
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-4 w-full">
-                      <div className="flex-1 flex flex-col">
-                        <Label
-                          className="text-black mb-1 text-lg"
-                          htmlFor="sender_name"
-                        >
-                          Nome
-                        </Label>
-                        <Input
-                          className="text-black"
-                          id="sender_name"
-                          placeholder="João da Silva"
-                          value={newGift?.sender_name}
-                          required={true}
-                          onChange={(e) =>
-                            setNewGift({
-                              ...newGift,
-                              sender_name: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="flex-1 flex flex-col">
-                        <Label
-                          className="text-black mb-1 text-lg"
-                          htmlFor="sender_phone"
-                        >
-                          Telefone
-                        </Label>
-                        <Input
-                          className="text-black"
-                          id="sender_phone"
-                          placeholder="(99) 9 9999-9999"
-                          value={newGift?.sender_phone}
-                          required={true}
-                          onChange={(e) =>
-                            setNewGift({
-                              ...newGift,
-                              sender_phone: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                    {/* TODO: Feature de envio de E-mail ao criar presente */}
-                    <div className="flex gap-2 justify-center">
-                      <Switch
-                        onCheckedChange={() =>
-                          setSendMessage(sendMessage === false ? true : false)
-                        }
-                        checked={sendMessage}
-                        id="sendMessage"
-                      />
-                      <p className="text-gray-800">
-                        Desejo enviar uma mensagem
-                      </p>
-                    </div>
-                    {sendMessage && (
-                      <div className="justify-center gap-4 flex flex-col">
-                        <div className="flex flex-col">
-                          <Label
-                            className="text-black mb-1 text-lg"
-                            htmlFor="sender_phone"
-                          >
-                            Sua Mensagem
-                          </Label>
-                          <Textarea
-                            className="text-black resize-none"
-                            id="message"
-                            placeholder="Escreva sua mensagem..."
-                            rows={3}
-                            maxLength={250}
-                            value={newGift?.message}
-                            onChange={(e) =>
-                              setNewGift({
-                                ...newGift,
-                                message: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      </div>
-                    )}
-                    {/* TODO: Fix send gift adding a <form> to this dialog */}
-                    <Button
-                      className="bg-transparent text-black shadow-lg border-black border hover:bg-gray-600 hover:text-white"
-                      type="submit"
-                      disabled={stage === "published" ? false : true}
-                    >
-                      Confirmar Escolha
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isAddItemModalOpen} onOpenChange={setIsAddItemModalOpen}>
         <DialogContent aria-describedby="additem-description">
