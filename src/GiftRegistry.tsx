@@ -93,6 +93,7 @@ export default function GiftRegistry({
   const [selectedItem, setSelectedItem] = useState<ItemObject | null>(null);
   const [isDomainDialogOpen, setIsDomainDialogOpen] = useState(false);
   const [CurrentUser, setCurrentUser] = useState<UserObject | null>(null);
+  const [noLoginState, setNoLoginState] = useState<boolean>(false);
   const [CurrentUserPage, setCurrentUserPage] = useState<PageObject | null>(
     page
   );
@@ -239,12 +240,26 @@ export default function GiftRegistry({
     }
   }, [CurrentUserPage, CurrentUser]);
 
+  useEffect(() => {
+    const fetchNoLoginPage = async () => {
+      setIsDomainDialogOpen(true);
+      setItemUseImageLink(true);
+    };
+    if (noLoginState) {
+      fetchNoLoginPage();
+    }
+  }, [noLoginState]);
+
   const createBlankPage = async (domain: string) => {
     const newPage = {
       domain: domain,
     };
     const response = await api.post("/pages", newPage);
-    if (response.status === 409) {
+    if (response?.status == 409) {
+      toast({
+        title: "Este nome de página já está em uso!",
+        description: "Por favor, escolha outro nome de página.",
+      });
       return;
     }
     setCurrentUserPage(response.data);
@@ -311,11 +326,7 @@ export default function GiftRegistry({
   const editItem = async (e: React.FormEvent) => {
     console.log("Editando item...");
     e.preventDefault();
-    if (
-      selectedItem &&
-      selectedItem?.name &&
-      selectedItem?.image_url
-    ) {
+    if (selectedItem && selectedItem?.name && selectedItem?.image_url) {
       try {
         const responseEditItem = await api.put(
           `/items/${selectedItem.id}`,
@@ -560,21 +571,24 @@ export default function GiftRegistry({
               ) : null}
               {stage === "building" ? (
                 <div className="flex items-center gap-4">
-                  {userLogged && (
+                  {userLogged || noLoginState ? (
                     <ShareModalButton
                       enabled={CurrentUserPage != null}
                       domain={CurrentUserPage?.domain}
                       pageId={CurrentUserPage?.id ?? 0}
                     />
-                  )}
-                  {userLogged == false ? (
+                  ) : null}
+                  {userLogged == false && noLoginState == false ? (
                     <LoginModalButton
                       onLoginSuccess={(loginResponse: CredentialResponse) =>
                         handleGoogleLoginResponse(loginResponse)
                       }
                       onLoginFailure={() => handleGoogleLoginResponse()}
+                      onNoLoginOption={(noLoginState: boolean) =>
+                        setNoLoginState(noLoginState)
+                      }
                     />
-                  ) : (
+                  ) : userLogged ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Avatar className="cursor-pointer">
@@ -598,7 +612,7 @@ export default function GiftRegistry({
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  )}
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -606,7 +620,7 @@ export default function GiftRegistry({
         </nav>
       )}
       <div className="my-2 h-6"></div>
-      {userLogged || publicAccess ? (
+      {userLogged || noLoginState || publicAccess ? (
         CurrentUserPage ? (
           <div>
             <header className="text-center mb-12 space-y-4 ">
@@ -713,7 +727,6 @@ export default function GiftRegistry({
                         </Button>
                       </div>
                     ) : item.payment_form == "purchase-link" ? (
-                      
                       <div className="text-center mb-2">
                         <Button
                           onClick={() => open(item.payment_info)}
@@ -724,8 +737,8 @@ export default function GiftRegistry({
                       </div>
                     ) : item.payment_form == "other" ? (
                       <p className="text-sm mb-2 text-center font-mono">
-                      {item.payment_info}
-                    </p>
+                        {item.payment_info}
+                      </p>
                     ) : null}
                   </CardContent>
                 </Card>
@@ -875,6 +888,7 @@ export default function GiftRegistry({
                   className="ml-2"
                   checked={itemUseImageLink}
                   onCheckedChange={(value) => setItemUseImageLink(value)}
+                  disabled={noLoginState}
                 />
               </div>
 
@@ -980,8 +994,10 @@ export default function GiftRegistry({
                   <Label className="text-black" htmlFor="itemPaymentForm">
                     Forma de Pagamento
                   </Label>
-                  <Select value={selectedItem?.payment_form} 
-                    onValueChange={handlePaymentFormChange}>
+                  <Select
+                    value={selectedItem?.payment_form}
+                    onValueChange={handlePaymentFormChange}
+                  >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Selecionar" />
                     </SelectTrigger>
@@ -1115,7 +1131,10 @@ export default function GiftRegistry({
                 id="itemPaymentInfo"
                 value={selectedItem?.payment_info}
                 onChange={(e) =>
-                  setSelectedItem({ ...selectedItem, payment_info: e.target.value })
+                  setSelectedItem({
+                    ...selectedItem,
+                    payment_info: e.target.value,
+                  })
                 }
                 placeholder={
                   paymentForm === "pix"
