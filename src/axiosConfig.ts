@@ -36,6 +36,10 @@ api.interceptors.response.use(
     return response;
   },
   error => {
+    console.error('Erro na resposta:', error);
+    if (error.response?.status === 409) {
+      return error.response;
+    }
     if (error.response?.status === 401 || error.response?.status === 403) {
       // Remove o cookie de sessão
       Cookies.remove("sessionToken");
@@ -62,7 +66,7 @@ api.interceptors.response.use(
           window.location.href = '/error';
           break;
     }
-    console.error('Erro na resposta:', error);
+    
     return Promise.reject(error);
   }
 });
