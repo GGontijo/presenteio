@@ -125,7 +125,6 @@ export default function GiftRegistry({
   const userLogin = (token: string) => {
     setUserLogged(true);
     Cookies.set("sessionToken", token, {
-      expires: 1,
       path: "/",
       secure: true,
     });
@@ -249,6 +248,14 @@ export default function GiftRegistry({
 
   useEffect(() => {
     const fetchNoLoginPage = async () => {
+      try {
+        const response = await api.post("/users");
+        const responseToken = response.headers["authorization"];
+        userLogin(responseToken?.split("Bearer ")[1] as string);
+        setCurrentUser(response.data);
+      } catch (err) {
+        console.log(err);
+      }
       setIsDomainDialogOpen(true);
       setItemUseImageLink(true);
     };
@@ -490,14 +497,8 @@ export default function GiftRegistry({
   ) => {
     if (GoogleLoginResponse) {
       if (!userLogged) {
-        const tokenDecoded = jwtDecode<JwtObject>(
-          GoogleLoginResponse.credential as string
-        );
-
         try {
           const response = await api.post("/users", {
-            name: tokenDecoded.name,
-            email: tokenDecoded.email,
             bearer_token: GoogleLoginResponse.credential,
             auth_provider: "google",
           });
@@ -595,7 +596,7 @@ export default function GiftRegistry({
                         setNoLoginState(noLoginState)
                       }
                     />
-                  ) : userLogged ? (
+                  ) : userLogged && noLoginState == false ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Avatar className="cursor-pointer">
