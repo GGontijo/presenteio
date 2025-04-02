@@ -41,6 +41,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu";
@@ -240,14 +241,18 @@ export default function GiftRegistry({
       }
     };
 
+    if (CurrentUser?.name == "Temp User") {
+      setNoLoginState(true);
+    }
+
     if (!CurrentUserPage && CurrentUser) {
       fetchUserPage();
       setIsDomainDialogOpen(true);
     }
   }, [CurrentUserPage, CurrentUser]);
 
-  useEffect(() => {
-    const fetchNoLoginPage = async () => {
+  const handleNoLoginReponse = async () => {
+    if (!userLogged) {
       try {
         const response = await api.post("/users");
         const responseToken = response.headers["authorization"];
@@ -256,11 +261,12 @@ export default function GiftRegistry({
       } catch (err) {
         console.log(err);
       }
-      setIsDomainDialogOpen(true);
-      setItemUseImageLink(true);
-    };
+    }
+  };
+
+  useEffect(() => {
     if (noLoginState) {
-      fetchNoLoginPage();
+      setItemUseImageLink(true);
     }
   }, [noLoginState]);
 
@@ -592,11 +598,9 @@ export default function GiftRegistry({
                         handleGoogleLoginResponse(loginResponse)
                       }
                       onLoginFailure={() => handleGoogleLoginResponse()}
-                      onNoLoginOption={(noLoginState: boolean) =>
-                        setNoLoginState(noLoginState)
-                      }
+                      onNoLoginOption={() => handleNoLoginReponse()}
                     />
-                  ) : userLogged && noLoginState == false ? (
+                  ) : userLogged /*&& noLoginState == false*/ ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Avatar className="cursor-pointer">
@@ -608,6 +612,9 @@ export default function GiftRegistry({
                         </Avatar>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
+                        <DropdownMenuLabel>
+                          {CurrentUser?.name}
+                        </DropdownMenuLabel>
                         {/* <DropdownMenuItem className="cursor-pointer">
                         Configurações
                       </DropdownMenuItem> */}
