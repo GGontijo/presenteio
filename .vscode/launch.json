@@ -1,0 +1,48 @@
+{
+    // Use o IntelliSense para saber mais sobre os atributos possíveis.
+    // Focalizar para exibir as descrições dos atributos existentes.
+    // Para obter mais informações, acesse: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "frontend",
+            "request": "launch",
+            "runtimeArgs": [
+                "run-script",
+                "dev"
+            ],
+            "runtimeExecutable": "npm",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node",
+            "cwd": "${workspaceFolder}/frontend",
+        },
+        {
+            "name": "backend",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "ENV": "development"
+            },
+            "args": [
+                "app.main:app",
+                "--reload",
+                "--port",
+                "8089"
+            ]
+        }
+    ],
+    "compounds": [
+        {
+            "name": "frontend + backend",
+            "configurations": [
+                "frontend",
+                "backend"
+            ],
+            "stopAll": true
+        }
+    ]
+}
