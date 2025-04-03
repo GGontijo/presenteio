@@ -1,0 +1,17 @@
+bcrypt==4.0.1
+python-multipart
+sqlalchemy
+pydantic
+fastapi
+uvicorn
+psycopg2
+pytest
+pytest-env
+httpx
+passlib
+email-validator
+faker
+pyjwt
+boto3
+PyYAML
+cryptography

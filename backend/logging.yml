@@ -1,0 +1,54 @@
+version: 1
+disable_existing_loggers: False
+formatters:
+
+  default:
+    "()": uvicorn.logging.DefaultFormatter
+    format: '%(asctime)s [%(levelname)s] %(message)s'
+
+  access:
+    "()": uvicorn.logging.AccessFormatter
+    format: "%(asctime)s [%(levelname)s] %(message)s"
+
+  file:
+    "()": logging.Formatter
+    format: "%(asctime)s [%(levelname)s] %(message)s"
+
+handlers:
+
+  default:
+    formatter: default
+    class: logging.StreamHandler
+    stream: ext://sys.stderr
+
+  access:
+    formatter: access
+    class: logging.StreamHandler
+    stream: ext://sys.stdout
+
+  file_handler:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: INFO
+    formatter: file # Este formatador não gera saída com colorização
+    when: midnight # Quando o log rotaciona
+    interval: 1 # Intervalo de rotação
+    backupCount: 60 # Máximo de logs rotacionados, acima disso é arquivos antigos são deletados
+    filename: logs/presenteio_backend.log
+    encoding: utf8
+
+loggers:
+  
+  root:
+    level: INFO
+    handlers: [default, file_handler]
+    propagate: no
+
+  uvicorn.error:
+    level: INFO
+    handlers: [default, file_handler]
+    propagate: no
+    
+  uvicorn.access:
+    level: INFO
+    handlers: [access, file_handler]
+    propagate: no
