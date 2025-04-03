@@ -1,0 +1,41 @@
+version: '3'
+services:
+  database:
+    image: postgres:17
+    container_name: presenteio-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database:/var/lib/postgresql/data
+      - ./db_init/:/docker-entrypoint-initdb.d
+    env_file:
+      - .env
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: presenteio-backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - database
+    env_file:
+      - ./backend/.env
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: presenteio-frontend
+    ports:
+      - "5178:5178"
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+    
