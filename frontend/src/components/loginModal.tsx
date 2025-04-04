@@ -31,7 +31,9 @@ export function LoginModalButton({
             <DialogTitle className="text-xl text-gray-800">
               Crie sua Página
             </DialogTitle>
-            <DialogDescription>Entre com sua conta Google</DialogDescription>
+            <DialogDescription>
+              Escolha como você quer continuar
+            </DialogDescription>
           </DialogHeader>
         </div>
         <div className="flex flex-row items-center gap-4 justify-center w-full h-full">
