@@ -30,8 +30,8 @@
             "args": [
                 "app.main:app",
                 "--reload",
-                "--port",
-                "8089"
+                "--env-file",
+                "${workspaceFolder}/backend/.env",
             ]
         }
     ],
