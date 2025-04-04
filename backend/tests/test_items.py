@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from app.main import app
 from conftest import fake
 from fastapi.testclient import TestClient
