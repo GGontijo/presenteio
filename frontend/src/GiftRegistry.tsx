@@ -865,7 +865,7 @@ export default function GiftRegistry({
                     <div className="p-1">
                       <Card>
                         <CardContent className="flex aspect-square items-center justify-center p-6">
-                          <img src="https://avatars.githubusercontent.com/u/38219914?v=4"></img>
+                          <img src="/assets/example.png"></img>
                         </CardContent>
                       </Card>
                     </div>
