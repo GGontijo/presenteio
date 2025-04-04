@@ -854,39 +854,23 @@ export default function GiftRegistry({
             </div>
           )
         ) : (
-          <div className="">
-            <h1 className="text-center text-xl text-gray-600">
-              Faça login para criar a sua página
+          <div className="flex flex-col items-center justify-center">
+            <h1 className="text-center text-2xl text-gray-600">
+              Crie sua lista de presente incrível e compartilhe com seus
+              convidados
             </h1>
-            <div className="flex justify-center w-full">
-              <Carousel className="w-full">
+            <div className="sm:max-w-2xl py-8">
+              <Carousel>
                 <CarouselContent>
                   <CarouselItem key={"1"}>
-                    <div className="p-1">
-                      <Card>
-                        <CardContent className="flex aspect-square items-center justify-center p-6">
-                          <img src="/assets/example.png"></img>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CarouselItem>
-                  <CarouselItem key={"1"}>
-                    <div className="p-1">
-                      <Card>
-                        <CardContent className="flex aspect-square items-center justify-center p-6">
-                          teste
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CarouselItem>
-                  <CarouselItem key={"1"}>
-                    <div className="p-1">
-                      <Card>
-                        <CardContent className="flex aspect-square items-center justify-center p-6">
-                          teste
-                        </CardContent>
-                      </Card>
-                    </div>
+                    <Card>
+                      <CardContent className="p-2">
+                        <img
+                          className="object-fill"
+                          src="/assets/example.png"
+                        />
+                      </CardContent>
+                    </Card>
                   </CarouselItem>
                 </CarouselContent>
                 <CarouselPrevious />
@@ -1214,12 +1198,13 @@ export default function GiftRegistry({
           </DialogContent>
         </Dialog>
       </div>
+
       <footer className="footer footer-center p-4 bg-base-200 text-base-content rounded mt-auto">
         <p className="text-muted-foreground text-sm">
           Feito com ❤ por <a href="https://github.com/ggontijo">GGontijo.</a>{" "}
           <a href="https://github.com/ggontijo/presenteio">
             Este site é open source.
-          </a>
+          </a>{" "}
         </p>
       </footer>
     </div>
