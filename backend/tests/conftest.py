@@ -1,14 +1,14 @@
-from fastapi.testclient import TestClient
+import pytest
+from app.database import SessionLocal, load_up_tables
+from app.main import app
 from app.models.items_model import ItemTable
 from app.models.pages_model import PageItemTable, PageTable
+from app.models.users_model import UsersTable
 from app.schemas.items_schema import ItemCreate
 from app.schemas.pages_schema import PageCreate
-from app.database import SessionLocal, load_up_tables
 from app.schemas.users_schema import UserCreate
-from app.models.users_model import UsersTable
-from app.main import app
 from faker import Faker
-import pytest
+from fastapi.testclient import TestClient
 
 fake = Faker("pt_BR")
 
@@ -81,7 +81,6 @@ def create_item(create_user):
         name="Test Item",
         description="Test Description",
         image_url=fake.image_url(),
-        value=100,
         payment_form="other",
         payment_info="Test Payment Info",
     )
