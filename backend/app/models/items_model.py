@@ -23,7 +23,6 @@ class ItemTable(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     image_url = Column(Text, nullable=True)
-    value = Column(DECIMAL(10, 2), nullable=True)
     payment_form = Column(String(255), nullable=True)
     payment_info = Column(String(255), nullable=True)
     created_at = Column(
