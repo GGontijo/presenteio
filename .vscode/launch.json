@@ -24,9 +24,6 @@
             "request": "launch",
             "module": "uvicorn",
             "cwd": "${workspaceFolder}/backend",
-            "env": {
-                "ENV": "development"
-            },
             "args": [
                 "app.main:app",
                 "--reload",
