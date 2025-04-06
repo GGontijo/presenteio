@@ -45,7 +45,6 @@ CREATE TABLE items (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     image_url TEXT,
-    value DECIMAL(10, 2),
     payment_form VARCHAR(255) CHECK (payment_form IN ('pix', 'purchase-link', 'other', NULL)),
     payment_info VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # starts up development environment
-    logging.info(f"Starting with {os.getenv('ENV'), 'development'} environment...")
+    logging.info(f"Starting with {os.getenv('ENV', 'development')} environment...")
     match os.getenv("ENV"):
         case "development":
             load_up_tables()

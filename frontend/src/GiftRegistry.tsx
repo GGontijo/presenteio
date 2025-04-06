@@ -61,7 +61,6 @@ interface ItemObject {
   name?: string;
   description?: string;
   image_url?: string;
-  value?: number;
   payment_form?: string;
   payment_info?: string;
 }
@@ -714,13 +713,6 @@ export default function GiftRegistry({
                           {item.name}
                         </p>
                       </div>
-                      {item.value ? (
-                        <div>
-                          <p className="mb-2 text-lg font-mono text-center text-gray-700">
-                            R$ {item.value}
-                          </p>
-                        </div>
-                      ) : null}
                       <p className="text-sm mb-2 text-center font-mono">
                         {item.description}
                       </p>
@@ -854,39 +846,23 @@ export default function GiftRegistry({
             </div>
           )
         ) : (
-          <div className="">
-            <h1 className="text-center text-xl text-gray-600">
-              Faça login para criar a sua página
+          <div className="flex flex-col items-center justify-center">
+            <h1 className="text-center text-2xl text-gray-600">
+              Crie sua lista de presente incrível e compartilhe com seus
+              convidados
             </h1>
-            <div className="flex justify-center w-full">
-              <Carousel className="w-full">
+            <div className="sm:max-w-2xl py-8">
+              <Carousel>
                 <CarouselContent>
                   <CarouselItem key={"1"}>
-                    <div className="p-1">
-                      <Card>
-                        <CardContent className="flex aspect-square items-center justify-center p-6">
-                          <img src="/assets/example.png"></img>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CarouselItem>
-                  <CarouselItem key={"1"}>
-                    <div className="p-1">
-                      <Card>
-                        <CardContent className="flex aspect-square items-center justify-center p-6">
-                          teste
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CarouselItem>
-                  <CarouselItem key={"1"}>
-                    <div className="p-1">
-                      <Card>
-                        <CardContent className="flex aspect-square items-center justify-center p-6">
-                          teste
-                        </CardContent>
-                      </Card>
-                    </div>
+                    <Card>
+                      <CardContent className="p-2">
+                        <img
+                          className="object-fill"
+                          src="/assets/example.png"
+                        />
+                      </CardContent>
+                    </Card>
                   </CarouselItem>
                 </CarouselContent>
                 <CarouselPrevious />
@@ -992,10 +968,10 @@ export default function GiftRegistry({
               <div className="flex gap-2">
                 <div>
                   <Label className="text-black flex items-center mb-2">
-                    Adicionar informações de Compra
+                    Adicionar informações extras sobre o Item
                   </Label>
                   <p className="text-xs text-gray-800">
-                    Informe onde comprar e qual o valor do item
+                    Informe como e onde comprar
                   </p>
                 </div>
                 <Switch
@@ -1006,43 +982,6 @@ export default function GiftRegistry({
               </div>
               {provideItemDetails ? (
                 <div className="space-y-2">
-                  <div>
-                    <Label className="text-black" htmlFor="giftValue">
-                      Valor do Item
-                    </Label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <span className="text-muted-foreground">R$</span>
-                      </div>
-                      <Input
-                        id="giftValue"
-                        type="text"
-                        value={
-                          newItem?.value
-                            ? new Intl.NumberFormat("pt-BR", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              }).format(newItem?.value)
-                            : ""
-                        }
-                        onChange={(e) => {
-                          let value = e.target.value;
-
-                          // Remove caracteres não numéricos, mantendo a vírgula
-                          value = value.replace(/\D/g, "");
-
-                          // Divide por 100 para obter o valor correto
-                          const floatValue = Number(value) / 100;
-
-                          // Atualiza o estado com o valor numérico
-                          setNewItem({ ...newItem, value: floatValue });
-                        }}
-                        placeholder="0,00"
-                        inputMode="decimal"
-                        className="flex items-center pl-9 text-xl"
-                      />
-                    </div>
-                  </div>
                   <div>
                     <Label className="text-black" htmlFor="itemPaymentForm">
                       Forma de Pagamento
@@ -1124,48 +1063,6 @@ export default function GiftRegistry({
                 />
               </div>
               <div>
-                <div className="space-y-2">
-                  <Label className="text-black" htmlFor="giftValue">
-                    Valor do Item
-                  </Label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <span className="text-muted-foreground">R$</span>
-                    </div>
-                    <Input
-                      id="giftValue"
-                      type="text"
-                      value={
-                        selectedItem?.value
-                          ? new Intl.NumberFormat("pt-BR", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            }).format(selectedItem?.value)
-                          : ""
-                      }
-                      onChange={(e) => {
-                        let value = e.target.value;
-
-                        // Remove caracteres não numéricos, mantendo a vírgula
-                        value = value.replace(/\D/g, "");
-
-                        // Divide por 100 para obter o valor correto
-                        const floatValue = Number(value) / 100;
-
-                        // Atualiza o estado usando setSelectedItem
-                        setSelectedItem((prevItem) => ({
-                          ...prevItem,
-                          value: floatValue,
-                        }));
-                      }}
-                      placeholder="0,00"
-                      inputMode="decimal"
-                      className="flex items-center pl-9 text-xl"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div>
                 <Label className="text-black" htmlFor="itemPaymentForm">
                   Forma de Pagamento
                 </Label>
@@ -1214,12 +1111,13 @@ export default function GiftRegistry({
           </DialogContent>
         </Dialog>
       </div>
+
       <footer className="footer footer-center p-4 bg-base-200 text-base-content rounded mt-auto">
         <p className="text-muted-foreground text-sm">
           Feito com ❤ por <a href="https://github.com/ggontijo">GGontijo.</a>{" "}
           <a href="https://github.com/ggontijo/presenteio">
             Este site é open source.
-          </a>
+          </a>{" "}
         </p>
       </footer>
     </div>

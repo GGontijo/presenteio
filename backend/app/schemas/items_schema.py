@@ -16,7 +16,6 @@ class ItemBase(BaseModel):
     name: str
     description: Optional[str] = None
     image_url: Optional[str] = None
-    value: Optional[Decimal] = None
     payment_form: Optional[PaymentFormEnum] = None
     payment_info: Optional[str] = None
 
@@ -39,7 +38,6 @@ class ItemUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     image_url: Optional[str] = None
-    value: Optional[Decimal] = None
     payment_form: Optional[PaymentFormEnum] = None
     payment_info: Optional[str] = None
 
