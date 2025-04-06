@@ -1,10 +1,14 @@
-from pathlib import Path
+import logging
 import uuid
-from botocore.exceptions import NoCredentialsError
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
+from pathlib import Path
+
+from app.database import get_db
 from app.security import jwt_session
-from app.services.s3_bucket import s3_client
-from app.services.s3_bucket import AWS_BUCKET_NAME, AWS_REGION
+from app.services.s3_bucket import AWS_BUCKET_NAME, AWS_REGION, s3_client
+from botocore.exceptions import NoCredentialsError
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+
+from backend.app.models.users_model import UsersTable
 
 uploads_router = APIRouter(
     prefix="/uploads",
@@ -15,9 +19,20 @@ uploads_router = APIRouter(
 
 @uploads_router.post("")
 async def upload_file(
-    file: UploadFile = File(...), user_auth_data: dict = Depends(jwt_session)
+    file: UploadFile = File(...),
+    user_auth_data: dict = Depends(jwt_session),
+    db=Depends(get_db),
 ):
     try:
+        # Verifica se o usuário está autenticado
+        user_db = (
+            db.query(UsersTable)
+            .filter(UsersTable.id == user_auth_data["user_id"])
+            .first()
+        )
+        if not user_db:
+            raise HTTPException(status_code=401, detail="Usuário não autenticado")
+
         file_content = await file.read()
 
         # Limitando o tamanho em no máximo em 10 MB
@@ -56,7 +71,9 @@ async def upload_file(
 
         return {"file_url": file_url}
 
-    except NoCredentialsError:
-        raise HTTPException(status_code=401, detail="Credenciais AWS inválidas")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao fazer upload: {str(e)}")
+        logging.error(f"Erro ao fazer upload do arquivo: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Houve um erro inesperado ao fazer o upload do arquivo",
+        )
