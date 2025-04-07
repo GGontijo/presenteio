@@ -41,7 +41,8 @@ CREATE TABLE pages (
 -- Criar a tabela de itens
 CREATE TABLE items (
     id SERIAL PRIMARY KEY,
-    user_id INT,
+    user_id INT NOT NULL,
+    page_id INT NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     image_url TEXT,
@@ -50,17 +51,6 @@ CREATE TABLE items (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Criar a tabela de itens de páginas
-CREATE TABLE page_items (
-    id SERIAL PRIMARY KEY,
-    page_id INT NOT NULL,
-    item_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE,
-    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 );
 
 -- Criar função para atualizar o campo updated_at
