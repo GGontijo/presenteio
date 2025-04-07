@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
@@ -29,7 +28,8 @@ class ItemCreate(ItemBase):
 
 class Item(ItemBase):
     id: int
-    user_id: Optional[int] = None
+    user_id: int
+    page_id: int
     created_at: datetime
     updated_at: datetime
 
