@@ -26,6 +26,7 @@ services:
       - database
     env_file:
       - ./backend/.env
+      - .env
 
   frontend:
     build:

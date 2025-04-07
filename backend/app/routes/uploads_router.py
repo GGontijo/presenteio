@@ -3,12 +3,10 @@ import uuid
 from pathlib import Path
 
 from app.database import get_db
+from app.models.users_model import UsersTable
 from app.security import jwt_session
 from app.services.s3_bucket import AWS_BUCKET_NAME, AWS_REGION, s3_client
-from botocore.exceptions import NoCredentialsError
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-
-from backend.app.models.users_model import UsersTable
 
 uploads_router = APIRouter(
     prefix="/uploads",

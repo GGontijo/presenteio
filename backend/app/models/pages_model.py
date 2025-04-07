@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from app.database import Base
 from sqlalchemy import (
     CheckConstraint,
     Column,
@@ -9,9 +10,6 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import relationship
-
-from app.database import Base
 
 
 class PageTable(Base):
@@ -39,36 +37,8 @@ class PageTable(Base):
         nullable=False,
     )
 
-    # Relacionamento com PageItemTable
-    page_items = relationship(
-        "PageItemTable", back_populates="page", cascade="all, delete-orphan"
-    )
-
     __table_args__ = (
         CheckConstraint(
             "status IN ('building', 'published', 'overdue')", name="check_status"
         ),
     )
-
-
-class PageItemTable(Base):
-    __tablename__ = "page_items"
-
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    page_id = Column(Integer, ForeignKey("pages.id"))
-    item_id = Column(Integer, ForeignKey("items.id"))
-    created_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(tz=timezone.utc),
-        nullable=False,
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(tz=timezone.utc),
-        onupdate=lambda: datetime.now(tz=timezone.utc),
-        nullable=False,
-    )
-
-    # Relacionamentos
-    page = relationship("PageTable", back_populates="page_items")
-    item = relationship("ItemTable", back_populates="page_items")

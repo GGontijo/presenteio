@@ -35,11 +35,3 @@ class PageUpdate(PageBase):
     status: Optional[str] = None
     description: Optional[str] = None
     picture_url: Optional[str] = None
-
-
-class PageItem(BaseModel):
-    id: int
-    page_id: int
-    item_id: int
-    created_at: datetime
-    updated_at: datetime

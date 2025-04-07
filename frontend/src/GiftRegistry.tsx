@@ -59,6 +59,8 @@ interface PageObject {
 interface ItemObject {
   id?: number; // TODO: Obter id do retorno da API
   name?: string;
+  user_id?: number;
+  page_id?: number;
   description?: string;
   image_url?: string;
   payment_form?: string;
@@ -178,26 +180,13 @@ export default function GiftRegistry({
   }, []);
 
   useEffect(() => {
-    const fetchItems = async () => {
+    const fetchPageItems = async () => {
       try {
         const response = await api.get(`/pages/${CurrentUserPage?.id}/items`);
         const pageItemsList = response.data;
 
         if (pageItemsList.length > 0) {
-          const fetchedItems: ItemObject[] = []; // Array temporário para armazenar itens
-
-          for (const pageItem of pageItemsList) {
-            const responseItem = await api.get(`/items/${pageItem.item_id}`);
-            const itemData = responseItem.data;
-
-            // Verifica se o item já existe no array
-            if (!fetchedItems.find((item) => item.id === itemData.id)) {
-              fetchedItems.push(itemData);
-            }
-          }
-
-          // Atualiza o estado com os itens únicos
-          setItems(fetchedItems);
+          setItems(pageItemsList); // Adiciona os itens da página
         }
       } catch (err) {
         console.log(err);
@@ -217,14 +206,15 @@ export default function GiftRegistry({
     };
 
     if (CurrentUserPage) {
-      setItems([]); // Limpa todos os itens
       fetchPageDetails(); // Busca Título e Descrição
-      fetchItems(); // Busca todos os itens
+    }
+    if (CurrentUserPage && items.length === 0) {
+      fetchPageItems(); // Busca os itens da página
     }
     if (publicAccess) {
       setStage("published");
     }
-  }, [CurrentUserPage, publicAccess]);
+  }, [CurrentUserPage, items, publicAccess]);
 
   useEffect(() => {
     const fetchUserPage = async () => {
@@ -312,24 +302,18 @@ export default function GiftRegistry({
   };
 
   const addItem = async (e: React.FormEvent) => {
-    console.log("Adicionando item...");
     e.preventDefault();
     if (newItem?.name && newItem?.image_url) {
       try {
-        const responseNewItem = await api.post("/items", newItem);
-        console.log(responseNewItem);
+        const responseNewItem = await api.post(
+          `/pages/${CurrentUserPage?.id}/items`,
+          newItem
+        );
 
         const createdItem = await responseNewItem.data;
 
         setItems([...items, { ...createdItem }]);
         resetNewItem();
-
-        const responseNewPageItem = api.post(
-          `/pages/${CurrentUserPage?.id}/items/${createdItem.id}`,
-          newItem
-        );
-
-        console.log(responseNewPageItem);
         setIsAddItemModalOpen(false);
       } catch (err) {
         console.log(err);
@@ -343,15 +327,13 @@ export default function GiftRegistry({
   };
 
   const editItem = async (e: React.FormEvent) => {
-    console.log("Editando item...");
     e.preventDefault();
     if (selectedItem && selectedItem?.name && selectedItem?.image_url) {
       try {
         const responseEditItem = await api.put(
-          `/items/${selectedItem.id}`,
+          `/pages/${CurrentUserPage?.id}/items/${selectedItem.id}`,
           selectedItem
         );
-        console.log(responseEditItem);
 
         const editedItem = await responseEditItem.data;
 
@@ -361,7 +343,9 @@ export default function GiftRegistry({
               gift.id === selectedItem.id ? editedItem : gift
             )
           );
-          console.log(responseEditItem);
+          toast({
+            title: "Item editado com sucesso!",
+          });
         } else {
           toast({
             title: "Houve um erro ao tentar adicionar o item.",
@@ -527,9 +511,15 @@ export default function GiftRegistry({
   };
 
   async function removeItem(id: number): Promise<void> {
-    const response = await api.delete(`/items/${id}`);
+    const response = await api.delete(
+      `/pages/${CurrentUserPage?.id}/items/${id}`
+    );
     if (response.status === 200) {
       setItems(items.filter((gift) => gift.id !== id));
+      toast({
+        title: "Item removido com sucesso!",
+        description: `O item foi removido com sucesso.`,
+      });
     } else {
       console.log(response.data);
       toast({
@@ -696,7 +686,7 @@ export default function GiftRegistry({
                         </Button>
                         <Button
                           className="bg-gray-500 h-8 hover:bg-red-500"
-                          onClick={() => removeItem(item?.id as number)}
+                          onClick={() => removeItem(item.id as number)}
                         >
                           Remover
                         </Button>

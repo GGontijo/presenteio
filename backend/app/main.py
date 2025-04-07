@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 
 from app.database import load_up_tables
 from app.routes.domains_router import domain_router
-from app.routes.items_router import item_router
 from app.routes.pages_router import page_item_router, page_router
 from app.routes.uploads_router import uploads_router
 from app.routes.users_router import users_router
@@ -61,5 +60,4 @@ app.include_router(uploads_router)
 app.include_router(domain_router)
 app.include_router(users_router)
 app.include_router(page_router)
-app.include_router(item_router)
 app.include_router(page_item_router)
