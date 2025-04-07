@@ -302,7 +302,6 @@ export default function GiftRegistry({
   };
 
   const addItem = async (e: React.FormEvent) => {
-    console.log("Adicionando item...");
     e.preventDefault();
     if (newItem?.name && newItem?.image_url) {
       try {
@@ -328,7 +327,6 @@ export default function GiftRegistry({
   };
 
   const editItem = async (e: React.FormEvent) => {
-    console.log("Editando item...");
     e.preventDefault();
     if (selectedItem && selectedItem?.name && selectedItem?.image_url) {
       try {
@@ -513,7 +511,6 @@ export default function GiftRegistry({
   };
 
   async function removeItem(id: number): Promise<void> {
-    console.log(id);
     const response = await api.delete(
       `/pages/${CurrentUserPage?.id}/items/${id}`
     );
