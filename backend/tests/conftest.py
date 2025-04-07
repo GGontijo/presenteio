@@ -2,7 +2,7 @@ import pytest
 from app.database import SessionLocal, load_up_tables
 from app.main import app
 from app.models.items_model import ItemTable
-from app.models.pages_model import PageItemTable, PageTable
+from app.models.pages_model import PageTable
 from app.models.users_model import UsersTable
 from app.schemas.items_schema import ItemCreate
 from app.schemas.pages_schema import PageCreate
@@ -93,12 +93,19 @@ def create_item(create_user):
 
 
 @pytest.fixture(scope="function")
-def create_page_item(create_page, create_item):
+def create_page_item(create_page):
     page_id = create_page.id
-    item_id = create_item.id
+    user_id = create_page.user_id
     db = SessionLocal()
-    db.query(PageItemTable).delete()
-    page_item_db = PageItemTable(page_id=page_id, item_id=item_id)
+    db.query(ItemTable).delete()
+    item = ItemCreate(
+        name="Test Item",
+        description="Test Description",
+        image_url=fake.image_url(),
+        payment_form="other",
+        payment_info="Test Payment Info",
+    )
+    page_item_db = ItemTable(user_id=user_id, page_id=page_id, **item.model_dump())
     db.add(page_item_db)
     db.commit()
     db.refresh(page_item_db)

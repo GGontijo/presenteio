@@ -1,21 +1,19 @@
-from fastapi.testclient import TestClient
-from conftest import fake
 from app.main import app
+from conftest import fake
+from fastapi.testclient import TestClient
+
 
 def test_create_page(get_session_header):
     with TestClient(app) as client:
         response = client.post(
-            "/pages", 
+            "/pages",
             headers=get_session_header,
-            json={
-                "domain": "test",
-                "title": "Test Page", 
-                "description": "Testing"
-            }
+            json={"domain": "test", "title": "Test Page", "description": "Testing"},
         )
         assert response.status_code == 200
         assert response.json()["title"] == "Test Page"
         assert response.json()["description"] == "Testing"
+
 
 def test_read_page(create_page):
     with TestClient(app) as client:
@@ -26,6 +24,7 @@ def test_read_page(create_page):
         assert response.json()["id"] == create_page.id
         assert response.json()["user_id"] == create_page.user_id
         assert response.json()["domain"] == create_page.domain
+
 
 def test_read_all_user_pages(create_page, get_session_header):
     with TestClient(app) as client:
@@ -39,17 +38,23 @@ def test_read_all_user_pages(create_page, get_session_header):
         assert response.json()[0]["user_id"] == create_page.user_id
         assert response.json()[0]["domain"] == create_page.domain
 
+
 def test_update_page(create_page, get_session_header):
     page_id = create_page.id
     with TestClient(app) as client:
         response = client.put(
             f"/pages/{page_id}",
             headers=get_session_header,
-            json={"domain": fake.domain_name(), "title": "Updated Page", "description": "Updated Testing"},
+            json={
+                "domain": fake.domain_name(),
+                "title": "Updated Page",
+                "description": "Updated Testing",
+            },
         )
         assert response.status_code == 200
         assert response.json()["title"] == "Updated Page"
         assert response.json()["description"] == "Updated Testing"
+
 
 def test_patch_page(create_page, get_session_header):
     page_id = create_page.id
@@ -62,21 +67,31 @@ def test_patch_page(create_page, get_session_header):
         assert response.status_code == 200
         assert response.json()["description"] == "Partially Updated Subject"
 
+
 def test_delete_page(create_page, get_session_header):
     page_id = create_page.id
     with TestClient(app) as client:
         response = client.delete(f"/pages/{page_id}", headers=get_session_header)
         assert response.status_code == 200
 
-def test_create_page_item(create_page, create_item, get_session_header):
+
+def test_create_page_item(create_page, get_session_header):
     page_id = create_page.id
-    item_id = create_item.id
     with TestClient(app) as client:
         response = client.post(
-            f"/pages/{page_id}/items/{item_id}",
-            headers=get_session_header
+            f"/pages/{page_id}/items",
+            headers=get_session_header,
+            json={
+                "name": "Test Item",
+                "description": "Test Description",
+                "image_url": "http://test.com/image.jpg",
+                "payment_form": "other",
+                "payment_info": "Test Payment Info",
+            },
         )
         assert response.status_code == 200
+        assert response.json()["name"] == "Test Item"
+
 
 def test_read_page_items(create_page_item):
     page_id = create_page_item.page_id
@@ -86,11 +101,65 @@ def test_read_page_items(create_page_item):
         assert isinstance(response.json(), list)
         assert len(response.json()) == 1
 
+
+def test_read_page_item(create_page_item, get_session_header):
+    page_id = create_page_item.page_id
+    item_id = create_page_item.id
+    with TestClient(app) as client:
+        response = client.get(
+            f"/pages/{page_id}/items/{item_id}",
+            headers=get_session_header,
+        )
+        assert response.status_code == 200
+        assert response.status_code == 200
+        assert response.json()["name"] == create_page_item.name
+        assert response.json()["description"] == create_page_item.description
+        assert response.json()["id"] == create_page_item.id
+        assert response.json()["user_id"] == create_page_item.user_id
+        assert response.json()["page_id"] == create_page_item.page_id
+        assert response.json()["image_url"] == create_page_item.image_url
+        assert response.json()["payment_form"] == create_page_item.payment_form
+        assert response.json()["payment_info"] == create_page_item.payment_info
+
+
+def test_update_page_item(create_page_item, get_session_header):
+    page_id = create_page_item.page_id
+    item_id = create_page_item.id
+    with TestClient(app) as client:
+        response = client.put(
+            f"/pages/{page_id}/items/{item_id}",
+            headers=get_session_header,
+            json={
+                "name": "Updated Item",
+                "description": "Updated Description",
+                "image_url": fake.image_url(),
+                "payment_form": "other",
+            },
+        )
+        assert response.status_code == 200
+        assert response.json()["name"] == "Updated Item"
+
+
+def test_patch_page_item(create_page_item, get_session_header):
+    page_id = create_page_item.page_id
+    item_id = create_page_item.id
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/pages/{page_id}/items/{item_id}",
+            headers=get_session_header,
+            json={"description": "Partially Updated Description"},
+        )
+        assert response.status_code == 200
+        assert response.json()["description"] == "Partially Updated Description"
+
+
 def test_delete_page_item(create_page_item, get_session_header):
     page_id = create_page_item.page_id
-    item_id = create_page_item.item_id
+    item_id = create_page_item.id
     with TestClient(app) as client:
-        response = client.delete(f"/pages/{page_id}/items/{item_id}", headers=get_session_header)
+        response = client.delete(
+            f"/pages/{page_id}/items/{item_id}", headers=get_session_header
+        )
         assert response.status_code == 200
         response = client.get(f"/pages/{page_id}/items")
         assert isinstance(response.json(), list)
