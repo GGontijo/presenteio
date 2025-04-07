@@ -2,7 +2,6 @@
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS pages CASCADE;
 DROP TABLE IF EXISTS items CASCADE;
-DROP TABLE IF EXISTS page_items CASCADE;
 
 -- Criar a tabela de usuários
 CREATE TABLE users (
@@ -75,10 +74,5 @@ EXECUTE FUNCTION set_updated_at();
 
 CREATE TRIGGER trigger_items_updated_at
 BEFORE UPDATE ON items
-FOR EACH ROW
-EXECUTE FUNCTION set_updated_at();
-
-CREATE TRIGGER trigger_page_items_updated_at
-BEFORE UPDATE ON page_items
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
