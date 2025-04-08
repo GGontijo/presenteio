@@ -28,10 +28,7 @@ async def lifespan(app: FastAPI):
         case "testing":
             load_up_tables()
         case "production":
-            # setup logfire for production
-            logging.info("Configuring logfire...")
-            logfire.configure()
-            logfire.instrument_fastapi(app, capture_headers=True)
+            pass
         case _:
             raise Exception(
                 f"Unknown environment {env}. Please set ENV to development, testing or production."
@@ -47,6 +44,11 @@ app = FastAPI(
     version="1.0.0",
     root_path="/api" if os.getenv("ENV") == "production" else "",
 )
+
+# setup logfire for production
+logging.info("Configuring logfire...")
+logfire.configure()
+logfire.instrument_fastapi(app, capture_headers=True)
 
 app.add_middleware(
     CORSMiddleware,
