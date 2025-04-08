@@ -22,7 +22,7 @@ class ItemTable(Base):
     description = Column(Text, nullable=True)
     image_url = Column(Text, nullable=True)
     payment_form = Column(String(255), nullable=True)
-    payment_info = Column(String(255), nullable=True)
+    payment_info = Column(Text, nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(tz=timezone.utc),

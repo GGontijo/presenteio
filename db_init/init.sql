@@ -46,7 +46,7 @@ CREATE TABLE items (
     description TEXT,
     image_url TEXT,
     payment_form VARCHAR(255) CHECK (payment_form IN ('pix', 'purchase-link', 'other', NULL)),
-    payment_info VARCHAR(255),
+    payment_info TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
