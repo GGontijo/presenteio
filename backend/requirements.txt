@@ -15,3 +15,4 @@ pyjwt
 boto3
 PyYAML
 cryptography
+logfire[fastapi,sqlalchemy]

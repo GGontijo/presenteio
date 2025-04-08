@@ -2,6 +2,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
+import logfire
 from app.database import load_up_tables
 from app.routes.domains_router import domain_router
 from app.routes.pages_router import page_item_router, page_router
@@ -15,12 +16,14 @@ from fastapi.middleware.cors import CORSMiddleware
 # TODO: Avaliar implementar rotas de register e login e criação de jwt token próprio para autenticação
 # (verificar post em users e avaliar gerar/retornar o token próprio por lá)
 
+env = os.getenv("ENV", "development")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # starts up development environment
-    logging.info(f"Starting with {os.getenv('ENV', 'development')} environment...")
-    match os.getenv("ENV"):
+    logging.info(f"Starting with {env} environment...")
+    match env:
         case "development":
             load_up_tables()
         case "testing":
@@ -28,7 +31,9 @@ async def lifespan(app: FastAPI):
         case "production":
             pass
         case _:
-            load_up_tables()
+            raise Exception(
+                f"Unknown environment {env}. Please set ENV to development, testing or production."
+            )
     yield
 
 
@@ -40,6 +45,10 @@ app = FastAPI(
     version="1.0.0",
     root_path="/api" if os.getenv("ENV") == "production" else "",
 )
+
+if env == "production":
+    logging.info("Adding fastapi instrumentation into logfire...")
+    logfire.instrument_fastapi(app, capture_headers=True)
 
 app.add_middleware(
     CORSMiddleware,
