@@ -47,8 +47,7 @@ app = FastAPI(
 )
 
 if env == "development":
-    logging.info("Configuring logfire...")
-    logfire.configure()
+    logging.info("Adding fastapi instrumentation into logfire...")
     logfire.instrument_fastapi(app, capture_headers=True)
 
 app.add_middleware(

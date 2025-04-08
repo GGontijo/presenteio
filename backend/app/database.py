@@ -37,7 +37,9 @@ match ENV:
         )
     case "production":
         logging.debug("Using production database!")
+        logging.info("Configuring logfire...")
         logfire.configure()
+        logging.info("Adding sqlalchemy instrumentation into logfire...")
         logfire.instrument_sqlalchemy(engine=engine)
     case _:
         raise Exception(
