@@ -16,11 +16,12 @@ from fastapi.middleware.cors import CORSMiddleware
 # TODO: Avaliar implementar rotas de register e login e criação de jwt token próprio para autenticação
 # (verificar post em users e avaliar gerar/retornar o token próprio por lá)
 
+env = os.getenv("ENV", "development")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # starts up development environment
-    env = os.getenv("ENV", "development")
     logging.info(f"Starting with {env} environment...")
     match env:
         case "development":
@@ -45,10 +46,10 @@ app = FastAPI(
     root_path="/api" if os.getenv("ENV") == "production" else "",
 )
 
-# setup logfire for production
-logging.info("Configuring logfire...")
-logfire.configure()
-logfire.instrument_fastapi(app, capture_headers=True)
+if env == "development":
+    logging.info("Configuring logfire...")
+    logfire.configure()
+    logfire.instrument_fastapi(app, capture_headers=True)
 
 app.add_middleware(
     CORSMiddleware,
