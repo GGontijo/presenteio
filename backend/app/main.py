@@ -46,7 +46,7 @@ app = FastAPI(
     root_path="/api" if os.getenv("ENV") == "production" else "",
 )
 
-if env == "development":
+if env == "production":
     logging.info("Adding fastapi instrumentation into logfire...")
     logfire.instrument_fastapi(app, capture_headers=True)
 
