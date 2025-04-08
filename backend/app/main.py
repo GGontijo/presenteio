@@ -2,6 +2,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
+import logfire
 from app.database import load_up_tables
 from app.routes.domains_router import domain_router
 from app.routes.pages_router import page_item_router, page_router
@@ -19,16 +20,22 @@ from fastapi.middleware.cors import CORSMiddleware
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # starts up development environment
-    logging.info(f"Starting with {os.getenv('ENV', 'development')} environment...")
-    match os.getenv("ENV"):
+    env = os.getenv("ENV", "development")
+    logging.info(f"Starting with {env} environment...")
+    match env:
         case "development":
             load_up_tables()
         case "testing":
             load_up_tables()
         case "production":
-            pass
+            # setup logfire for production
+            logging.info("Configuring logfire...")
+            logfire.configure()
+            logfire.instrument_fastapi(app, capture_headers=True)
         case _:
-            load_up_tables()
+            raise Exception(
+                f"Unknown environment {env}. Please set ENV to development, testing or production."
+            )
     yield
 
 
